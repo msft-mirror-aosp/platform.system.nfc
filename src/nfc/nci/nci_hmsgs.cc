@@ -22,15 +22,13 @@
  *  commands (for DH).
  *
  ******************************************************************************/
-#include "nci_hmsgs.h"
-
 #include <string.h>
+#include "nfc_target.h"
 
-#include "include/debug_lmrt.h"
 #include "nci_defs.h"
+#include "nci_hmsgs.h"
 #include "nfc_api.h"
 #include "nfc_int.h"
-#include "nfc_target.h"
 
 /*******************************************************************************
 **
@@ -657,10 +655,6 @@ uint8_t nci_snd_set_routing_cmd(bool more, uint8_t num_tlv, uint8_t tlv_size,
     UINT8_TO_STREAM(pp, num_tlv);
     ARRAY_TO_STREAM(pp, p_param_tlvs, tlv_size);
   }
-
-  uint8_t* lmrt_head_ptr = (uint8_t*)(p + 1) + p->offset;
-  lmrt_capture(lmrt_head_ptr, size + 3);
-
   nfc_ncif_send_cmd(p);
 
   return (NCI_STATUS_OK);
