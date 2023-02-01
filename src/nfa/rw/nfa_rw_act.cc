@@ -21,11 +21,10 @@
  *  This file contains the action functions the NFA_RW state machine.
  *
  ******************************************************************************/
-#include <log/log.h>
-#include <string.h>
-
 #include <android-base/stringprintf.h>
 #include <base/logging.h>
+#include <log/log.h>
+#include <string.h>
 
 #include "ndef_utils.h"
 #include "nfa_dm_int.h"
@@ -2368,7 +2367,7 @@ static bool nfa_rw_i93_command(tNFA_RW_MSG* p_data) {
 
     case NFA_RW_OP_I93_STAY_QUIET:
       i93_command = I93_CMD_STAY_QUIET;
-      status = RW_I93StayQuiet(p_data->op_req.params.i93_cmd.p_data);
+      status = RW_I93StayQuiet(p_data->op_req.params.i93_cmd.uid);
       break;
 
     case NFA_RW_OP_I93_READ_SINGLE_BLOCK:
