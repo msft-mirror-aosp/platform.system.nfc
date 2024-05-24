@@ -729,6 +729,12 @@ static void nfa_dm_disc_discovery_cback(tNFC_DISCOVER_EVT event,
     case NFC_INTF_EXT_STOP_DEVT:
       dm_disc_event = NFA_DM_RF_INTF_EXT_STOP_RSP;
       break;
+    case NFC_DETECTION_START_DEVT:
+      dm_disc_event = NFA_DM_RF_REMOVAL_DETECT_START_RSP;
+      break;
+    case NFC_DETECTION_RESULT_DEVT:
+      dm_disc_event = NFA_DM_RF_REMOVAL_DETECTION_NTF;
+      break;
     case NFC_WPT_START_DEVT:
       dm_disc_event = NFA_DM_WPT_START_RSP;
       break;
@@ -2423,6 +2429,42 @@ static void nfa_dm_disc_sm_poll_active(tNFA_DM_RF_DISC_SM_EVENT event,
     case NFA_DM_RF_INTF_EXT_STOP_RSP:
       break;
 
+    case NFA_DM_RF_REMOVAL_DETECT_START_CMD:
+      /* if no deactivation ongoing */
+      if (!(nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_RSP)) {
+        NFC_StartEPRemovalDetection(p_data->detect_removal.waiting_time);
+      } else {
+        LOG(VERBOSE) << StringPrintf(
+            "%s; Fail to start "
+            "removal detection procedure, deactivation ongoing",
+            __func__);
+
+        nfa_dm_disc_conn_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT,
+                                      NFA_STATUS_FAILED);
+      }
+      break;
+
+    case NFA_DM_RF_REMOVAL_DETECT_START_RSP:
+      /* notify application status of detection start */
+      if (p_data->nfc_discover.status != NFC_STATUS_OK) {
+        nfa_dm_disc_conn_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT,
+                                      NFA_STATUS_FAILED);
+      }
+      break;
+
+    case NFA_DM_RF_REMOVAL_DETECTION_NTF:
+      /* removal detection started successfully, wait for end completion
+       * notification in new state */
+      LOG(VERBOSE) << StringPrintf(
+          "%s; Removal detection"
+          " started successfully",
+          __func__);
+      /* change state to NFA_DM_RFST_POLL_REMOVAL_DETECTION */
+      nfa_dm_disc_new_state(NFA_DM_RFST_POLL_REMOVAL_DETECTION);
+      nfa_dm_disc_conn_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT,
+                                    p_data->nfc_discover.status);
+      break;
+
     case NFA_DM_WPT_START_CMD:
       if (nfa_dm_cb.flags & NFA_DM_FLAGS_WLCP_ENABLED) {
         if (!(nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_RSP)) {
@@ -2513,6 +2555,104 @@ static void nfa_dm_disc_sm_poll_active(tNFA_DM_RF_DISC_SM_EVENT event,
     /* performing sleep wakeup and exception conditions happened
      * clear sleep wakeup information and report failure */
     nfa_dm_disc_end_sleep_wakeup(NFC_STATUS_FAILED);
+  }
+}
+
+/*******************************************************************************
+**
+** Function         nfa_dm_disc_sm_poll_removal_detection
+**
+** Description      Processing discovery events
+**                  in NFA_DM_RFST_POLL_REMOVAL_DETECTION state
+**
+** Returns          void
+**
+*******************************************************************************/
+static void nfa_dm_disc_sm_poll_removal_detection(
+    tNFA_DM_RF_DISC_SM_EVENT event,
+    __attribute__((unused)) tNFA_DM_RF_DISC_DATA* p_data) {
+  switch (event) {
+    case NFA_DM_RF_REMOVAL_DETECTION_NTF:
+      /* deactivate to idle */
+      LOG(ERROR) << StringPrintf(
+          "%s; Unexpected notification, "
+          "deactivate to idle",
+          __func__);
+      nfa_dm_send_deactivate_cmd(NFA_DEACTIVATE_TYPE_IDLE);
+      break;
+
+    case NFA_DM_RF_DEACTIVATE_CMD:
+      nfa_dm_send_deactivate_cmd(p_data->deactivate_type);
+      break;
+
+    case NFA_DM_RF_DEACTIVATE_RSP:
+      nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_W4_RSP;
+      if (!(nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_NTF)) {
+        /* it's race condition. received deactivate NTF before receiving RSP */
+
+        tNFC_DEACTIVATE_DEVT deact = tNFC_DEACTIVATE_DEVT();
+        deact.status = NFC_STATUS_OK;
+        deact.type = NFC_DEACTIVATE_TYPE_IDLE;
+        deact.is_ntf = true;
+        tNFC_DISCOVER nfc_discover;
+        nfc_discover.deactivate = deact;
+        nfa_dm_disc_notify_deactivation(NFA_DM_RF_DEACTIVATE_NTF,
+                                        &nfc_discover);
+
+        /* NFCC is in IDLE state */
+        nfa_dm_disc_new_state(NFA_DM_RFST_IDLE);
+        nfa_dm_start_rf_discover();
+      }
+      break;
+
+    case NFA_DM_RF_DEACTIVATE_NTF:
+      nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_W4_NTF;
+
+      nfa_sys_stop_timer(&nfa_dm_cb.disc_cb.tle);
+
+      if (nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_RSP) {
+        /* it's race condition. received deactivate NTF before receiving RSP */
+        /* notify deactivation after receiving deactivate RSP */
+        LOG(VERBOSE) << StringPrintf(
+            "%s; Rx deactivate NTF while waiting for deactivate RSP", __func__);
+        break;
+      }
+
+      if (p_data->nfc_discover.deactivate.reason !=
+          NFC_DEACTIVATE_REASON_DH_REQ_FAILED) {
+        nfa_dm_disc_notify_deactivation(NFA_DM_RF_DEACTIVATE_NTF,
+                                        &(p_data->nfc_discover));
+      }
+
+      if (p_data->nfc_discover.deactivate.type == NFC_DEACTIVATE_TYPE_IDLE) {
+        nfa_dm_disc_new_state(NFA_DM_RFST_IDLE);
+        nfa_dm_start_rf_discover();
+      } else if (p_data->nfc_discover.deactivate.type ==
+                 NFC_DEACTIVATE_TYPE_DISCOVERY) {
+        nfa_dm_disc_new_state(NFA_DM_RFST_DISCOVERY);
+        /* if deactivation type is discovery and comes after 3 tentatives of
+         * unsuccessful deactivation to sleep then reset the counter and  notify
+         * upper layer.
+         */
+        // TODO: not, counter only used for sleep type?
+        nfa_dm_cb.deactivate_cmd_retry_count = 0;
+        LOG(VERBOSE) << __func__
+                     << StringPrintf("NFA_DM_RF_DEACTIVATE_NTF to discovery");
+        if (p_data->nfc_discover.deactivate.reason ==
+            NFC_DEACTIVATE_REASON_DH_REQ_FAILED) {
+          nfa_dm_disc_notify_deactivation(NFA_DM_RF_DEACTIVATE_NTF,
+                                          &(p_data->nfc_discover));
+        }
+        if (nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_STOPPING) {
+          /* stop discovery */
+          NFC_Deactivate(NFA_DEACTIVATE_TYPE_IDLE);
+        }
+      }
+      break;
+
+    default:
+      LOG(ERROR) << StringPrintf("%s; Unexpected discovery event", __func__);
+      break;
   }
 }
 
@@ -2795,6 +2935,11 @@ void nfa_dm_disc_sm_execute(tNFA_DM_RF_DISC_SM_EVENT event,
       nfa_dm_disc_sm_poll_active(event, p_data);
       break;
 
+      /* RF Discovery State - Poll removal detection */
+    case NFA_DM_RFST_POLL_REMOVAL_DETECTION:
+      nfa_dm_disc_sm_poll_removal_detection(event, p_data);
+      break;
+
     /* RF Discovery State - listen mode activated */
     case NFA_DM_RFST_LISTEN_ACTIVE:
       nfa_dm_disc_sm_listen_active(event, p_data);
@@ -2975,6 +3120,53 @@ void nfa_dm_rf_discover_select(uint8_t rf_disc_id, tNFA_NFC_PROTOCOL protocol,
 
 /*******************************************************************************
 **
+** Function         nfa_dm_rf_removal_detection
+**
+** Description      Process start endpoint removal detection command
+**
+** Returns          TRUE (message buffer to be freed by caller)
+**
+*******************************************************************************/
+bool nfa_dm_rf_removal_detection(uint8_t waiting_time) {
+  tNFA_DM_DETECT_EP_REMOVAL_PARAMS detect_params;
+  tNFA_CONN_EVT_DATA conn_evt;
+
+  LOG(VERBOSE) << StringPrintf("%s; waiting_time:0x%X", __func__, waiting_time);
+
+  if (nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_POLL_ACTIVE) {
+    if ((nfa_dm_cb.disc_cb.activated_protocol == NFC_PROTOCOL_T2T) ||
+        (nfa_dm_cb.disc_cb.activated_protocol == NFC_PROTOCOL_T3T) ||
+        (nfa_dm_cb.disc_cb.activated_protocol == NFC_PROTOCOL_ISO_DEP) ||
+        (nfa_dm_cb.disc_cb.activated_protocol == NFA_PROTOCOL_T5T)) {
+      /* state is OK: notify the status when the response is received from NFCC
+       */
+      detect_params.waiting_time = waiting_time;
+
+      nfa_dm_cb.disc_cb.disc_flags |= NFA_DM_DISC_FLAGS_NOTIFY;
+      nfa_dm_cb.flags |= NFA_DM_FLAGS_EP_REMOVAL_DETECT_PEND;
+      tNFA_DM_RF_DISC_DATA nfa_dm_rf_disc_data;
+      nfa_dm_rf_disc_data.detect_removal = detect_params;
+      nfa_dm_disc_sm_execute(NFA_DM_RF_REMOVAL_DETECT_START_CMD,
+                             &nfa_dm_rf_disc_data);
+    } else {
+      LOG(ERROR) << __func__
+                 << " - Activated RF interface not ISO-DEP "
+                    "or Frame RF Interface";
+      conn_evt.status = NFA_STATUS_FAILED;
+      nfa_dm_conn_cback_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT, &conn_evt);
+      return false;
+    }
+  } else {
+    /* Wrong state: notify failed status right away */
+    LOG(ERROR) << __func__ << " - NFCC not in poll active state";
+    conn_evt.status = NFA_STATUS_FAILED;
+    nfa_dm_conn_cback_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT, &conn_evt);
+  }
+  return true;
+}
+
+/*******************************************************************************
+**
 ** Function         nfa_dm_rf_deactivate
 **
 ** Description      Deactivate NFC link
@@ -3049,6 +3241,9 @@ static std::string nfa_dm_disc_state_2_str(uint8_t state) {
     case NFA_DM_RFST_POLL_ACTIVE:
       return "POLL_ACTIVE";
 
+    case NFA_DM_RFST_POLL_REMOVAL_DETECTION:
+      return "POLL_REMOVAL_DETECTION";
+
     case NFA_DM_RFST_LISTEN_ACTIVE:
       return "LISTEN_ACTIVE";
 
@@ -3103,6 +3298,12 @@ static std::string nfa_dm_disc_event_2_str(uint8_t event) {
       return "INTF_EXT_STOP_CMD";
     case NFA_DM_RF_INTF_EXT_STOP_RSP:
       return "INTF_EXT_STOP_RSP";
+    case NFA_DM_RF_REMOVAL_DETECT_START_CMD:
+      return "REMOVAL_DETECT_START_CMD";
+    case NFA_DM_RF_REMOVAL_DETECT_START_RSP:
+      return "REMOVAL_DETECT_START_RSP";
+    case NFA_DM_RF_REMOVAL_DETECTION_NTF:
+      return "REMOVAL_DETECTION_NTF";
     case NFA_DM_WPT_START_CMD:
       return "WPT_START_CMD";
     case NFA_DM_WPT_START_RSP:

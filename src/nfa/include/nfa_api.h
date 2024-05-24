@@ -327,6 +327,10 @@ typedef enum {
 #define NFA_LISTEN_DISABLED_EVT 37
 /* T2T command completed */
 #define NFA_T2T_CMD_CPLT_EVT 40
+/* EP removal detection response */
+#define NFA_DETECT_REMOVAL_STARTED_EVT 51
+/* EP removal detection notification */
+#define NFA_DETECT_REMOVAL_RESULT_EVT 52
 /* RF Interface Extension result event */
 #define NFA_RF_INTF_EXT_RESULT_EVT 43
 
@@ -485,6 +489,11 @@ typedef struct {
   uint16_t len;       /* Length of data                       */
 } tNFA_CE_DATA;
 
+/* Structure for NFA_EP_REMOVAL_DETECTION_EVT data */
+typedef struct {
+  uint8_t reason; /* Reason from RF_DEACTIVATE_NTF       */
+} tNFA_EP_REMOVED;
+
 /* Union of all connection callback structures */
 typedef union {
   tNFA_STATUS status;           /* NFA_POLL_ENABLED_EVT                 */
@@ -501,6 +510,7 @@ typedef union {
   tNFA_CE_ACTIVATED ce_activated;     /* NFA_CE_ACTIVATED_EVT                 */
   tNFA_CE_DEACTIVATED ce_deactivated; /* NFA_CE_DEACTIVATED_EVT               */
   tNFA_CE_DATA ce_data;               /* NFA_CE_DATA_EVT                      */
+  tNFA_EP_REMOVED removal_detect;     /* NFA_EP_REMOVAL_DETECTION_EVT   */
 
 } tNFA_CONN_EVT_DATA;
 
@@ -1086,6 +1096,23 @@ extern tNFA_STATUS NFA_Select(uint8_t rf_disc_id, tNFA_NFC_PROTOCOL protocol,
 **
 *******************************************************************************/
 extern tNFA_STATUS NFA_UpdateRFCommParams(tNFA_RF_COMM_PARAMS* p_params);
+
+/*******************************************************************************
+**
+** Function         NFA_StartRemovalDetection
+**
+** Description      Start the detection of RF endpoint removal when data
+*exchange
+**                  ore charging with listener completed.
+**
+**                  An NFA_DETECT_REMOVAL_RESULT_EVT indicates whether start
+**                  was successful or not.
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+tNFA_STATUS NFA_StartRemovalDetection(uint8_t waiting_time_int);
 
 /*******************************************************************************
 **

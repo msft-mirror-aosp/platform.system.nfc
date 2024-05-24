@@ -45,6 +45,7 @@ typedef uint8_t tNFA_WLC_MODE;
 typedef union {
   tNFA_STATUS status; /* NFA_WLC_..._EVT        */
   uint8_t wpt_end_cdt;
+  uint8_t deact_reason;
 
 } tNFA_WLC_EVT_DATA;
 
