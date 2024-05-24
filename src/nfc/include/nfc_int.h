@@ -283,6 +283,7 @@ extern void nfc_ncif_proc_data(NFC_HDR* p_msg);
 extern bool nfc_ncif_proc_proprietary_rsp(uint8_t mt, uint8_t gid, uint8_t oid);
 extern void nfc_ncif_proc_isodep_nak_presence_check_status(uint8_t status,
                                                            bool is_ntf);
+extern void nfc_ncif_proc_removal_status(uint8_t* p);
 extern void nfc_ncif_proc_charging_status(uint8_t* p, uint8_t len);
 
 extern void nfc_ncif_update_window(void);

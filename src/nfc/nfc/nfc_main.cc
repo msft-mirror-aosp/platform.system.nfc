@@ -1018,6 +1018,26 @@ tNFC_STATUS NFC_StopRfIntfExtension(uint8_t rf_ext_id, uint8_t* p_data,
 
 /*******************************************************************************
 **
+** Function         NFC_StartEPRemovalDetection
+**
+** Description      If tNFC_DISCOVER_CBACK reports status=NFC_MULTIPLE_PROT,
+**                  the application needs to use this function to select the
+**                  the logical endpoint to continue. The response from NFCC is
+**                  reported by tNFC_DISCOVER_CBACK as NFC_SELECT_DEVT.
+**
+** Parameters       rf_disc_id - The ID identifies the remote device.
+**                  protocol - the logical endpoint on the remote device
+**                  rf_interface - the RF interface to communicate with NFCC
+**
+** Returns          tNFC_STATUS
+**
+*******************************************************************************/
+tNFC_STATUS NFC_StartEPRemovalDetection(uint8_t waiting_time) {
+  return nci_snd_ep_removal_detection_cmd(waiting_time);
+}
+
+/*******************************************************************************
+**
 ** Function         NFC_StartPowerTransfert
 **
 ** Description      If tNFC_DISCOVER_CBACK reports status=NFC_MULTIPLE_PROT,

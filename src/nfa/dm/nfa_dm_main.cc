@@ -65,6 +65,8 @@ const tNFA_DM_ACTION nfa_dm_action[] = {
     nfa_dm_act_set_rf_disc_duration, /* NFA_DM_API_SET_RF_DISC_DURATION_EVT  */
     nfa_dm_act_select,               /* NFA_DM_API_SELECT_EVT                */
     nfa_dm_act_update_rf_params,     /* NFA_DM_API_UPDATE_RF_PARAMS_EVT      */
+    nfa_dm_act_start_removal_detection, /* NFA_DM_API_START_REMOVAL_DETECT_EVT
+                                         */
     nfa_dm_act_deactivate,           /* NFA_DM_API_DEACTIVATE_EVT            */
     nfa_dm_act_power_off_sleep,      /* NFA_DM_API_POWER_OFF_SLEEP_EVT       */
     nfa_dm_ndef_reg_hdlr,            /* NFA_DM_API_REG_NDEF_HDLR_EVT         */
@@ -483,6 +485,8 @@ static std::string nfa_dm_evt_2_str(uint16_t event) {
       return "NFA_DM_API_SELECT_EVT";
     case NFA_DM_API_UPDATE_RF_PARAMS_EVT:
       return "NFA_DM_API_UPDATE_RF_PARAMS_EVT";
+    case NFA_DM_API_START_REMOVAL_DETECT_EVT:
+      return "NFA_DM_API_START_REMOVAL_DETECT_EVT";
     case NFA_DM_API_DEACTIVATE_EVT:
       return "NFA_DM_API_DEACTIVATE_EVT";
     case NFA_DM_API_POWER_OFF_SLEEP_EVT:

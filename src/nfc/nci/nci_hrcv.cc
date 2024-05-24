@@ -226,6 +226,10 @@ void nci_proc_rf_management_rsp(NFC_HDR* p_msg) {
       nfc_ncif_rf_management_status(NFC_INTF_EXT_STOP_DEVT, *pp);
       break;
 
+    case NCI_MSG_RF_REMOVAL_DETECTION:
+      nfc_ncif_rf_management_status(NFC_DETECTION_START_DEVT, *pp);
+      break;
+
     case NCI_MSG_WPT_START:
       nfc_ncif_rf_management_status(NFC_WPT_START_DEVT, *pp);
       break;
@@ -310,6 +314,10 @@ void nci_proc_rf_management_ntf(NFC_HDR* p_msg) {
         return;
       }
       nfc_ncif_proc_isodep_nak_presence_check_status(*pp, true);
+      break;
+
+    case NCI_MSG_RF_REMOVAL_DETECTION:
+      nfc_ncif_proc_removal_status(pp);
       break;
 
     case NCI_MSG_WPT_START:

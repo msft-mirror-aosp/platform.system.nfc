@@ -906,6 +906,27 @@ void nfc_ncif_proc_isodep_nak_presence_check_status(uint8_t status,
 
 /*******************************************************************************
 **
+** Function         nfc_ncif_proc_removal_status
+**
+** Description      This function is called to process removal detection
+**                  notification
+**
+** Returns          void
+**
+*******************************************************************************/
+void nfc_ncif_proc_removal_status(uint8_t* p) {
+  tNFC_DISCOVER evt_data;
+
+  evt_data.status = *p;
+  LOG(VERBOSE) << StringPrintf("%s; status=%d", __func__, evt_data.status);
+
+  if (nfc_cb.p_discv_cback) {
+    (*nfc_cb.p_discv_cback)(NFC_DETECTION_RESULT_DEVT, &evt_data);
+  }
+}
+
+/*******************************************************************************
+**
 ** Function         nfc_ncif_proc_charging_status
 **
 ** Description      This function is called to process WPT start response

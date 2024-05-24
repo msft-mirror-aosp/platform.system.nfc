@@ -552,6 +552,8 @@ enum {
   NFC_DEACTIVATE_DEVT,             /* Status of RF deactivation        */
   NFC_INTF_EXT_START_DEVT,         /* Status of NFC_StartRfIntfExtension */
   NFC_INTF_EXT_STOP_DEVT,          /* Status of NFC_StopRfIntfExtension  */
+  NFC_DETECTION_START_DEVT,        /* Status of NFC_StartEPRemovalDetection */
+  NFC_DETECTION_RESULT_DEVT,       /* Removal Detection ended            */
   NFC_WPT_START_DEVT,              /* Status of NFC_StartPowerTransfert*/
   NFC_WPT_RESULT_DEVT,             /* Wireless Power Transfert ended   */
 };
@@ -994,6 +996,24 @@ extern tNFC_STATUS NFC_DiscoverySelect(uint8_t rf_disc_id, uint8_t protocol,
 *******************************************************************************/
 extern tNFC_STATUS NFC_StartRfIntfExtension(uint8_t rf_ext_id, uint8_t* p_data,
                                             uint8_t len);
+
+/*******************************************************************************
+**
+** Function         NFC_StartEPRemovalDetection
+**
+** Description      If tNFC_DISCOVER_CBACK reports status=NFC_MULTIPLE_PROT,
+**                  the application needs to use this function to select the
+**                  the logical endpoint to continue. The response from NFCC is
+**                  reported by tNFC_DISCOVER_CBACK as NFC_SELECT_DEVT.
+**
+** Parameters       rf_disc_id - The ID identifies the remote device.
+**                  protocol - the logical endpoint on the remote device
+**                  rf_interface - the RF interface to communicate with NFCC
+**
+** Returns          tNFC_STATUS
+**
+*******************************************************************************/
+extern tNFC_STATUS NFC_StartEPRemovalDetection(uint8_t waiting_time);
 
 /*******************************************************************************
 **

@@ -29,6 +29,7 @@
 #include "nfa_dm_int.h"
 #include "nfa_rw_int.h"
 #include "nfa_wlc_int.h"
+#include "nfc_int.h"
 
 using android::base::StringPrintf;
 
@@ -91,6 +92,15 @@ bool nfa_wlc_start(tNFA_WLC_MSG* p_data) {
   if (p_data->start.mode == NFA_WLC_NON_AUTONOMOUS) {
     // TODO: check WLC-P Non-Autonomous RF Interface Extension is enabled in
     // CORE_INIT_RSP
+    /* Reject request if NFCC does not support Removal Detection in Poll Mode */
+    /* Mandated for WLC procedure */
+    if (!(nfc_cb.nci_features & NCI_POLL_REMOVAL_DETECTION)) {
+      LOG(ERROR) << StringPrintf(
+          "%s; NFCC Feature Removal Detection "
+          "in Poll Mode not supported, can not start WLC procedure",
+          __func__);
+      return false;
+    }
 
     if (nfa_wlc_cb.flags & NFA_WLC_FLAGS_NON_AUTO_MODE_ENABLED) {
       /* Non-Autonomous RF Frame Extension shall be in stopped state */

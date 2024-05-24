@@ -31,6 +31,7 @@
 #include "nfa_ce_int.h"
 #include "nfa_rw_api.h"
 #include "nfa_rw_int.h"
+#include "nfa_wlc_int.h"
 
 #if (NFC_NFCEE_INCLUDED == TRUE)
 #include "nfa_ee_int.h"
@@ -752,6 +753,10 @@ bool nfa_dm_act_deactivate(tNFA_DM_MSG* p_data) {
       if (nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_W4_HOST_SELECT) {
         /* Deactivate to sleep mode not allowed in this state. */
         deact_type = NFA_DEACTIVATE_TYPE_IDLE;
+      } else if (nfa_dm_cb.disc_cb.disc_state ==
+                 NFA_DM_RFST_POLL_REMOVAL_DETECTION) {
+        /* Deactivate to sleep mode not allowed in this state. */
+        deact_type = NFA_DEACTIVATE_TYPE_IDLE;
       } else if (appl_dta_mode_flag == true &&
                  (nfa_dm_cb.disc_cb.disc_state != NFA_DM_RFST_LISTEN_SLEEP ||
                   nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_POLL_ACTIVE)) {
@@ -1250,6 +1255,50 @@ bool nfa_dm_act_update_rf_params(tNFA_DM_MSG* p_data) {
 
 /*******************************************************************************
 **
+** Function         nfa_dm_act_start_removal_detection
+**
+** Description      Process start endpoint removal detection command
+**
+** Returns          TRUE (message buffer to be freed by caller)
+**
+*******************************************************************************/
+bool nfa_dm_act_start_removal_detection(tNFA_DM_MSG* p_data) {
+  tNFA_CONN_EVT_DATA conn_evt;
+
+  LOG(VERBOSE) << __func__;
+
+  /* Reject request if NFCC does not support Removal Detection in Poll Mode */
+  if (!(nfc_cb.nci_features & NCI_POLL_REMOVAL_DETECTION)) {
+    LOG(ERROR) << StringPrintf(
+        "%s; NFCC Feature Removal Detection "
+        "in Poll Mode not supported",
+        __func__);
+
+    conn_evt.status = NFA_STATUS_FAILED;
+    nfa_dm_conn_cback_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT, &conn_evt);
+    return false;
+  } else {
+    /* Command only applicable to non WLC mode or non-autonomous mode
+     * if WLC started */
+    if (!((nfa_wlc_cb.wlc_mode & NFA_WLC_SEMI_AUTONOMOUS) ||
+          (nfa_wlc_cb.wlc_mode & NFA_WLC_AUTONOMOUS))) {
+      return nfa_dm_rf_removal_detection(
+          p_data->detect_removal_params.waiting_time_int);
+    } else {
+      LOG(ERROR) << StringPrintf(
+          "%s; Unexpected command in WLC Semi-autonomous or "
+          "Autonomous mode",
+          __func__);
+      conn_evt.status = NFA_STATUS_FAILED;
+      nfa_dm_conn_cback_event_notify(NFA_DETECT_REMOVAL_STARTED_EVT, &conn_evt);
+      return false;
+    }
+  }
+  return true;
+}
+
+/*******************************************************************************
+**
 ** Function         nfa_dm_act_disable_timeout
 **
 ** Description      timeout on disable process. Shutdown immediately
@@ -1538,6 +1587,18 @@ static void nfa_dm_poll_disc_cback(tNFA_DM_RF_DISC_EVT event,
       /* Notify NFA RW sub-systems */
       nfa_rw_proc_disc_evt(NFA_DM_RF_DISC_DEACTIVATED_EVT, nullptr, true);
 
+      // TODO: confirm, notification is to be done before NFA_DEACTIVATED_NTF
+      // and discovery restarted
+      /* if NFA sent NFA_DETECT_REMOVAL_STARTED_EVT earlier */
+      if (nfa_dm_cb.flags & NFA_DM_FLAGS_EP_REMOVAL_DETECT_PEND) {
+        nfa_dm_cb.flags &= ~NFA_DM_FLAGS_EP_REMOVAL_DETECT_PEND;
+
+        evt_data.removal_detect.reason = p_data->deactivate.reason;
+
+        /* notify removal to application to inform wlc at service level */
+        nfa_dm_conn_cback_event_notify(NFA_DETECT_REMOVAL_RESULT_EVT,
+                                       &evt_data);
+      }
       /* if NFA sent NFA_ACTIVATED_EVT earlier */
       if (nfa_dm_cb.flags & NFA_DM_FLAGS_SEND_DEACTIVATED_EVT) {
         nfa_dm_cb.flags &= ~NFA_DM_FLAGS_SEND_DEACTIVATED_EVT;
