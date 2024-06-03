@@ -317,10 +317,6 @@ tNFA_STATUS NFA_GetConfig(uint8_t num_ids, tNFA_PMID* p_param_ids) {
 **                  send commands to the tag. Incoming NDEF messages are sent to
 **                  the NDEF callback.
 **
-**                  Once exclusive RF control has started, NFA will not activate
-**                  LLCP internally. The application has exclusive control of
-**                  the link.
-**
 ** Note:            If RF discovery is started,
 **                  NFA_StopRfDiscovery()/NFA_RF_DISCOVERY_STOPPED_EVT should
 **                  happen before calling this function
@@ -418,8 +414,6 @@ tNFA_STATUS NFA_ReleaseExclusiveRfControl(void) {
 **                  - NFA_ACTIVATED_EVT is generated when an NFC link is
 **                    activated.
 **                  - NFA_NDEF_DETECT_EVT is generated if tag is activated
-**                  - NFA_LLCP_ACTIVATED_EVT/NFA_LLCP_DEACTIVATED_EVT is
-**                    generated if NFC-DEP is activated
 **                  - NFA_DEACTIVATED_EVT will be returned after deactivating
 **                    NFC link.
 **
@@ -1214,6 +1208,9 @@ void NFA_EnableDtamode(tNFA_eDtaModes eDtaMode) {
 **                               before calling NFA_StopRfDiscovery
 **                               FALSE if changing RF listening tech according
 **                               to listenTech
+**                  change_default_tech : TRUE if the default technolofy mask
+**                               has to be changed according to listenTech
+**                               and pollTech settings
 **
 ** Note:            If RF discovery is started,
 **                  NFA_StopRfDiscovery()/NFA_RF_DISCOVERY_STOPPED_EVT
@@ -1225,8 +1222,8 @@ void NFA_EnableDtamode(tNFA_eDtaModes eDtaMode) {
 *******************************************************************************/
 tNFA_STATUS NFA_ChangeDiscoveryTech(tNFA_TECHNOLOGY_MASK pollTech,
                                     tNFA_TECHNOLOGY_MASK listenTech,
-                                    bool is_revert_poll,
-                                    bool is_revert_listen) {
+                                    bool is_revert_poll, bool is_revert_listen,
+                                    bool change_default_tech) {
   tNFA_DM_API_CHANGE_DISCOVERY_TECH* p_msg;
   LOG(VERBOSE) << StringPrintf("%s: 0x%X 0x%X", __func__, pollTech, listenTech);
 
@@ -1235,6 +1232,7 @@ tNFA_STATUS NFA_ChangeDiscoveryTech(tNFA_TECHNOLOGY_MASK pollTech,
     p_msg->hdr.event = NFA_DM_API_CHANGE_DISCOVERY_TECH_EVT;
     p_msg->is_revert_poll = is_revert_poll;
     p_msg->is_revert_listen = is_revert_listen;
+    p_msg->change_default_tech = change_default_tech;
     p_msg->change_poll_mask = pollTech;
     p_msg->change_listen_mask = listenTech;
 
