@@ -20,7 +20,8 @@ use crate::internal::InnerHal;
 use crate::{is_control_packet, Hal, HalEvent, HalEventRegistry, HalEventStatus, Result};
 use bytes::{BufMut, BytesMut};
 use log::{debug, error};
-use nfc_packets::nci::{DataPacket, NciPacket, Packet};
+use nfc_packets::nci::{DataPacket, NciPacket};
+use pdl_runtime::Packet;
 use std::convert::TryInto;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -30,7 +31,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 /// Initialize the module
 pub async fn init() -> Hal {
     let (raw_hal, inner_hal) = InnerHal::new();
-    let (reader, writer) = TcpStream::connect("127.0.0.1:54323")
+    let (reader, writer) = TcpStream::connect("127.0.0.1:7000")
         .await
         .expect("unable to create stream to rootcanal")
         .into_split();
@@ -118,7 +119,7 @@ where
     W: AsyncWriteExt + Unpin,
     P: Packet,
 {
-    let b = cmd.to_bytes();
+    let b = cmd.encode_to_bytes().unwrap();
     let mut data = BytesMut::with_capacity(b.len() + 2);
     data.put_u16(b.len().try_into().unwrap());
     data.extend(b);

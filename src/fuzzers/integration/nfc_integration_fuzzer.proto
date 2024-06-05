@@ -49,44 +49,12 @@ message Command {
     EmptyMessage read_ndef = 20;
     EmptyMessage detect_ndef = 21;
     WriteNdef write_ndef = 22;
-
-    // P2P APIs
-    P2pRegisterServer p2p_register_server = 23;
-    P2pAcceptConn p2p_accept_conn = 24;
-    EmptyMessage p2p_register_client = 25;
-    int32 p2p_deregister = 26;
-    P2pConnectBySap p2p_connect_by_sap = 27;
-    P2pConnectByName p2p_connect_by_name = 28;
-    P2pSendUi p2p_send_ui = 29;
-    P2pDisconnect p2p_disconnect = 30;
-    EmptyMessage pause_p2p = 31;
-    EmptyMessage resume_p2p = 32;
-    P2pReadData p2p_read_data = 33;
-    P2pSendData p2p_send_data = 34;
   }
 }
 
 message ConfigureUiccListenTech {
   optional int32 ee_handle = 1;
   optional int32 tech_mask = 2;
-}
-
-message P2pDisconnect {
-  optional int32 handle = 1;
-  optional bool flush = 2;
-}
-
-message P2pSendUi {
-  optional int32 handle = 1;
-  optional int32 dsap = 2;
-  optional bytes data = 3;
-}
-
-message P2pConnectByName {
-  optional int32 client_handle = 1;
-  optional bytes service_name = 2;
-  optional int32 miu = 3;
-  optional int32 rw = 4;
 }
 
 message Select {
@@ -102,34 +70,6 @@ message RwPresenceCheck {
     FUZZING_NFA_RW_PRES_CHK_ISO_DEP_NAK = 5;
   }
   optional PresChkOption option = 1;
-}
-
-message P2pConnectBySap {
-  optional int32 handle = 1;
-  optional int32 dsap = 2;
-  optional int32 miu = 3;
-  optional int32 rw = 4;
-}
-
-message P2pReadData {
-  optional int32 handle = 1;
-  optional int32 length = 2;
-}
-
-message P2pSendData {
-  optional int32 handle = 1;
-  optional bytes data = 2;
-}
-
-message P2pAcceptConn {
-  optional int32 handle = 1;
-  optional int32 miu = 2;
-  optional int32 rw = 3;
-}
-
-message P2pRegisterServer {
-  optional bytes service_name = 1;
-  optional int32 server_sap = 2;
 }
 
 message EeAddAidRouting {
@@ -253,13 +193,9 @@ message DiscoveryType {
     FUZZER_DISCOVERY_TYPE_POLL_B = 0x01;
     FUZZER_DISCOVERY_TYPE_POLL_F = 0x02;
     FUZZER_DISCOVERY_TYPE_POLL_V = 0x06;
-    FUZZER_DISCOVERY_TYPE_POLL_A_ACTIVE = 0x03;
-    FUZZER_DISCOVERY_TYPE_POLL_F_ACTIVE = 0x05;
     FUZZER_DISCOVERY_TYPE_LISTEN_A = 0x80;
     FUZZER_DISCOVERY_TYPE_LISTEN_B = 0x81;
     FUZZER_DISCOVERY_TYPE_LISTEN_F = 0x82;
-    FUZZER_DISCOVERY_TYPE_LISTEN_A_ACTIVE = 0x83;
-    FUZZER_DISCOVERY_TYPE_LISTEN_F_ACTIVE = 0x85;
     FUZZER_DISCOVERY_TYPE_LISTEN_ISO15693 = 0x86;
     // These are proprietary and must be converted at runtime
     // based on the config.
