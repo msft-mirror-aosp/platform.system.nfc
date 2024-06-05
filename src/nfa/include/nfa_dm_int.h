@@ -688,6 +688,7 @@ tNFC_STATUS nfa_dm_disc_sleep_wakeup(void);
 tNFC_STATUS nfa_dm_disc_start_kovio_presence_check(void);
 bool nfa_dm_is_raw_frame_session(void);
 
+void nfa_dm_get_tech_route_block(uint8_t* listen_techmask, bool* enable);
 void nfa_dm_start_wireless_power_transfer(uint8_t power_adj_req,
                                           uint8_t wpt_time_int);
 bool nfa_dm_act_change_discovery_tech(tNFA_DM_MSG* p_data);
