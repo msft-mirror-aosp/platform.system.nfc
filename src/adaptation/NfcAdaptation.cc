@@ -94,6 +94,7 @@ std::string nfc_storage_path;
 uint8_t appl_dta_mode_flag = 0x00;
 bool isDownloadFirmwareCompleted = false;
 bool use_aidl = false;
+uint8_t mute_tech_route_option = 0x00;
 
 extern tNFA_DM_CFG nfa_dm_cfg;
 extern tNFA_PROPRIETARY_CFG nfa_proprietary_cfg;
@@ -127,6 +128,17 @@ void initializeNciResetTypeFlag() {
   nfc_nci_reset_type = NfcConfig::getUnsigned(NAME_NCI_RESET_TYPE, 0);
   LOG(VERBOSE) << StringPrintf("%s: nfc_nci_reset_type=%u", __func__,
                              nfc_nci_reset_type);
+}
+
+// initialize MuteTechRouteOption Flag
+// MUTE_TECH_ROUTE_OPTION
+// 0x00: Default. Route mute techs to DH, enable block bit and set power state
+// to 0x00 0x01: Remove mute techs from rf discover cmd
+void initializeNfcMuteTechRouteOptionFlag() {
+  mute_tech_route_option =
+      NfcConfig::getUnsigned(NAME_MUTE_TECH_ROUTE_OPTION, 0);
+  LOG(VERBOSE) << StringPrintf("%s: mute_tech_route_option=%u", __func__,
+                               mute_tech_route_option);
 }
 
 // Abort nfc service when AIDL process died.
@@ -463,6 +475,7 @@ void NfcAdaptation::Initialize() {
 
   initializeGlobalDebugEnabledFlag();
   initializeNciResetTypeFlag();
+  initializeNfcMuteTechRouteOptionFlag();
 
   LOG(VERBOSE) << StringPrintf("%s: enter", func);
 

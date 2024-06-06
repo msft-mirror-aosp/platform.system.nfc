@@ -60,6 +60,8 @@ const uint8_t nfa_ee_tech_list[NFA_EE_NUM_TECH] = {
  * the command for NFCC */
 #define NFA_EE_NUM_PROTO 5
 
+extern uint8_t mute_tech_route_option;
+
 static void add_route_tech_proto_tlv(uint8_t** pp, uint8_t tlv_type,
                                      uint8_t nfcee_id, uint8_t pwr_cfg,
                                      uint8_t tech_proto) {
@@ -328,8 +330,33 @@ static void nfa_ee_add_tech_route_to_ecb(tNFA_EE_ECB* p_cb, uint8_t* pp,
         power_cfg |= NCI_ROUTE_PWR_STATE_SCREEN_OFF_LOCK();
     }
     if (power_cfg) {
-      add_route_tech_proto_tlv(&pp, NFC_ROUTE_TAG_TECH, p_cb->nfcee_id,
-                               power_cfg, nfa_ee_tech_list[xx]);
+      if (mute_tech_route_option) {
+        add_route_tech_proto_tlv(&pp, NFC_ROUTE_TAG_TECH, p_cb->nfcee_id,
+                                 power_cfg, nfa_ee_tech_list[xx]);
+      } else {
+        bool block = 0;
+        uint8_t mask = 0;
+
+        nfa_dm_get_tech_route_block(&mask, &block);
+
+        // If block a tech, allow no power states
+        if (block && ((((mask & NFA_TECHNOLOGY_MASK_A) == 0) &&
+                       (nfa_ee_tech_list[xx] == NFC_RF_TECHNOLOGY_A)) ||
+                      (((mask & NFA_TECHNOLOGY_MASK_B) == 0) &&
+                       (nfa_ee_tech_list[xx] == NFC_RF_TECHNOLOGY_B)) ||
+                      (((mask & NFA_TECHNOLOGY_MASK_F) == 0) &&
+                       (nfa_ee_tech_list[xx] == NFC_RF_TECHNOLOGY_F)))) {
+          LOG(VERBOSE) << StringPrintf("%s; Blocking tech routing for tech: %d",
+                                       __func__, nfa_ee_tech_list[xx]);
+
+          add_route_tech_proto_tlv(
+              &pp, nfa_ee_cb.route_block_control | NFC_ROUTE_TAG_TECH,
+              0x00 /* DH */, 0x00 /* no power states */, nfa_ee_tech_list[xx]);
+        } else {
+          add_route_tech_proto_tlv(&pp, NFC_ROUTE_TAG_TECH, p_cb->nfcee_id,
+                                   power_cfg, nfa_ee_tech_list[xx]);
+        }
+      }
       num_tlv++;
       if (power_cfg != NCI_ROUTE_PWR_STATE_ON)
         nfa_ee_cb.ee_cfged |= NFA_EE_CFGED_OFF_ROUTING;
@@ -521,13 +548,34 @@ static void nfa_ee_add_sys_code_route_to_ecb(tNFA_EE_ECB* p_cb, uint8_t* pp,
       if (p_cb->sys_code_rt_loc_vs_info[xx] & NFA_EE_AE_ROUTE) {
         uint8_t* p_sys_code_cfg = &p_cb->sys_code_cfg[start_offset];
         if (nfa_ee_is_active(p_cb->sys_code_rt_loc[xx] | NFA_HANDLE_GROUP_EE)) {
-          add_route_sys_code_tlv(&pp, p_sys_code_cfg, p_cb->sys_code_rt_loc[xx],
-                                 p_cb->sys_code_pwr_cfg[xx]);
+          if (mute_tech_route_option) {
+            add_route_sys_code_tlv(&pp, p_sys_code_cfg,
+                                   p_cb->sys_code_rt_loc[xx],
+                                   p_cb->sys_code_pwr_cfg[xx]);
+          } else {
+            bool block = 0;
+            uint8_t mask = 0;
+
+            nfa_dm_get_tech_route_block(&mask, &block);
+
+            // If block a tech, allow no power states
+            if (block && (mask & NFA_TECHNOLOGY_MASK_F) == 0) {
+              LOG(VERBOSE) << StringPrintf(
+                  "%s; Blocking SC routing as tech F muted", __func__);
+
+              add_route_sys_code_tlv(&pp, p_sys_code_cfg, 0x00, 0x00);
+            } else {
+              add_route_sys_code_tlv(&pp, p_sys_code_cfg,
+                                     p_cb->sys_code_rt_loc[xx],
+                                     p_cb->sys_code_pwr_cfg[xx]);
+            }
+          }
+
           p_cb->ecb_flags |= NFA_EE_ECB_FLAGS_ROUTING;
           num_tlv++;
         } else {
           LOG(VERBOSE) << StringPrintf("%s -  ignoring route loc%x", __func__,
-                                     p_cb->sys_code_rt_loc[xx]);
+                                       p_cb->sys_code_rt_loc[xx]);
         }
       }
       start_offset += NFA_EE_SYSTEM_CODE_LEN;
