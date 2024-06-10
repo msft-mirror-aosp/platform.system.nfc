@@ -27,6 +27,7 @@ cc_library {
         "libbinder_ndk",
         "libstatssocket",
         "server_configurable_flags",
+        "libaconfig_storage_read_api_cc",
     ],
     static_libs: [
         "android.hardware.nfc@1.0",
