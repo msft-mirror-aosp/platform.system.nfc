@@ -87,6 +87,7 @@ INfcClientCallback* NfcAdaptation::mCallback;
 std::shared_ptr<INfcAidlClientCallback> mAidlCallback;
 ::ndk::ScopedAIBinder_DeathRecipient mDeathRecipient;
 std::shared_ptr<INfcAidl> mAidlHal;
+int32_t mAidlHalVer;
 
 bool nfc_nci_reset_keep_cfg_enabled = false;
 uint8_t nfc_nci_reset_type = 0x00;
@@ -94,6 +95,7 @@ std::string nfc_storage_path;
 uint8_t appl_dta_mode_flag = 0x00;
 bool isDownloadFirmwareCompleted = false;
 bool use_aidl = false;
+uint8_t mute_tech_route_option = 0x00;
 
 extern tNFA_DM_CFG nfa_dm_cfg;
 extern tNFA_PROPRIETARY_CFG nfa_proprietary_cfg;
@@ -127,6 +129,17 @@ void initializeNciResetTypeFlag() {
   nfc_nci_reset_type = NfcConfig::getUnsigned(NAME_NCI_RESET_TYPE, 0);
   LOG(VERBOSE) << StringPrintf("%s: nfc_nci_reset_type=%u", __func__,
                              nfc_nci_reset_type);
+}
+
+// initialize MuteTechRouteOption Flag
+// MUTE_TECH_ROUTE_OPTION
+// 0x00: Default. Route mute techs to DH, enable block bit and set power state
+// to 0x00 0x01: Remove mute techs from rf discover cmd
+void initializeNfcMuteTechRouteOptionFlag() {
+  mute_tech_route_option =
+      NfcConfig::getUnsigned(NAME_MUTE_TECH_ROUTE_OPTION, 0);
+  LOG(VERBOSE) << StringPrintf("%s: mute_tech_route_option=%u", __func__,
+                               mute_tech_route_option);
 }
 
 // Abort nfc service when AIDL process died.
@@ -229,6 +242,12 @@ class NfcAidlClientCallback
         break;
       case NfcAidlEvent::HCI_NETWORK_RESET:
         e_num = HAL_HCI_NETWORK_RESET;
+        break;
+      case NfcAidlEvent::REQUEST_CONTROL:
+        e_num = HAL_NFC_REQUEST_CONTROL_EVT;
+        break;
+      case NfcAidlEvent::RELEASE_CONTROL:
+        e_num = HAL_NFC_RELEASE_CONTROL_EVT;
         break;
       case NfcAidlEvent::ERROR:
       default:
@@ -463,6 +482,7 @@ void NfcAdaptation::Initialize() {
 
   initializeGlobalDebugEnabledFlag();
   initializeNciResetTypeFlag();
+  initializeNfcMuteTechRouteOptionFlag();
 
   LOG(VERBOSE) << StringPrintf("%s: enter", func);
 
@@ -726,7 +746,9 @@ void NfcAdaptation::InitializeHalDeviceContext() {
       AIBinder_linkToDeath(mAidlHal->asBinder().get(), mDeathRecipient.get(),
                            nullptr /* cookie */);
       mHal = mHal_1_1 = mHal_1_2 = nullptr;
-      LOG(INFO) << StringPrintf("%s: INfcAidl::fromBinder returned", func);
+      mAidlHal->getInterfaceVersion(&mAidlHalVer);
+      LOG(INFO) << StringPrintf("%s: INfcAidl::fromBinder returned ver(%d)",
+                                func, mAidlHalVer);
     }
     LOG_ALWAYS_FATAL_IF(mAidlHal == nullptr,
                         "Failed to retrieve the NFC AIDL!");
@@ -921,7 +943,12 @@ void NfcAdaptation::HalControlGranted() {
   const char* func = "NfcAdaptation::HalControlGranted";
   LOG(VERBOSE) << StringPrintf("%s", func);
   if (mAidlHal != nullptr) {
-    LOG(ERROR) << StringPrintf("Unsupported function %s", func);
+    if (mAidlHalVer > 1) {
+      NfcAidlStatus aidl_status;
+      mAidlHal->controlGranted(&aidl_status);
+    } else {
+      LOG(ERROR) << StringPrintf("Unsupported function %s", func);
+    }
   } else if (mHal != nullptr) {
     mHal->controlGranted();
   }

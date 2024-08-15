@@ -27,13 +27,17 @@ cc_library {
         "libbinder_ndk",
         "libstatssocket",
         "server_configurable_flags",
+        "libaconfig_storage_read_api_cc",
+    ],
+    defaults: [
+        "aconfig_lib_cc_shared_link.defaults",
     ],
     static_libs: [
         "android.hardware.nfc@1.0",
         "android.hardware.nfc@1.1",
         "android.hardware.nfc@1.2",
         // Add for AIDL
-        "android.hardware.nfc-V1-ndk",
+        "android.hardware.nfc-V2-ndk",
         "libnfcutils",
         "libstatslog_nfc",
         "libnfc-nci_flags",
@@ -304,7 +308,7 @@ cc_fuzz {
 
 genrule {
     name: "NfcGeneratedPackets_rust",
-    defaults: ["pdl_rust_generator_defaults"],
+    defaults: ["pdl_rust_legacy_generator_defaults"],
     srcs: ["nci_packets.pdl"],
     out: ["nci_packets.rs"],
 }
