@@ -33,6 +33,8 @@
 *****************************************************************************/
 /* 16 per ISO 7816 specification    */
 #define NFA_MAX_AID_LEN NFC_MAX_AID_LEN
+extern const uint8_t NFA_REMOVE_ALL_AID[];
+#define NFA_REMOVE_ALL_AID_LEN (0x08)
 
 /* NFA EE callback events */
 enum {

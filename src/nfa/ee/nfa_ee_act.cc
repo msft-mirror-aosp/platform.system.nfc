@@ -108,6 +108,8 @@ const uint8_t nfa_ee_proto_mask_list[NFA_EE_NUM_PROTO] = {
 const uint8_t nfa_ee_proto_list[NFA_EE_NUM_PROTO] = {
     NFC_PROTOCOL_T1T, NFC_PROTOCOL_T2T, NFC_PROTOCOL_T3T, NFC_PROTOCOL_ISO_DEP};
 
+const uint8_t NFA_REMOVE_ALL_AID[] = {0xFF, 0xFF, 0xFF, 0xFF,
+                                      0xFF, 0xFF, 0xFF, 0xFF};
 static void nfa_ee_report_discover_req_evt(void);
 static void nfa_ee_build_discover_req_evt(tNFA_EE_DISCOVER_REQ* p_evt_data);
 void nfa_ee_check_set_routing(uint16_t new_size, int* p_max_len, uint8_t* p,
@@ -1392,6 +1394,28 @@ void nfa_ee_api_remove_aid(tNFA_EE_MSG* p_data) {
     nfa_ee_start_timer();
     /* report NFA_EE_REMOVE_AID_EVT to the callback associated the NFCEE */
     p_cback = p_cb->p_ee_cback;
+  } else if ((p_data->rm_aid.aid_len == sizeof(NFA_REMOVE_ALL_AID)) &&
+             (0 == memcmp(NFA_REMOVE_ALL_AID, p_data->rm_aid.p_aid,
+                          p_data->rm_aid.aid_len))) {
+    int max_aid_cfg_length = nfa_ee_find_max_aid_cfg_len();
+    int max_aid_entries = max_aid_cfg_length / NFA_MIN_AID_LEN + 1;
+
+    /*Clear All AIDs*/
+    uint32_t xx;
+    tNFA_EE_ECB* p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      if (p_cb->aid_entries) {
+        memset(&p_cb->aid_cfg[0], 0x00, sizeof(p_cb->aid_cfg));
+        memset(&p_cb->aid_len[0], 0x00, max_aid_entries);
+        memset(&p_cb->aid_pwr_cfg[0], 0x00, max_aid_entries);
+        memset(&p_cb->aid_rt_info[0], 0x00, max_aid_entries);
+        p_cb->aid_entries = 0;
+
+        p_cb->size_aid = 0;
+
+        nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_cb);
+      }
+    }
   } else {
     LOG(WARNING) << StringPrintf(
         "nfa_ee_api_remove_aid The AID entry is not in the database");
