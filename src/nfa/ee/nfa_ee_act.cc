@@ -1291,6 +1291,18 @@ void nfa_ee_api_add_aid(tNFA_EE_MSG* p_data) {
     /* mark AID changed */
     p_cb->ecb_flags |= NFA_EE_ECB_FLAGS_AID;
     nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_cb);
+    // Case default AID is on DH: one ecb for DH and one ecb for default AID
+    // If default AID is DH then mask 0x10 (idx 4 is DH entry in ecb) is not set
+    // If no other type of routing done on DH, then default AID route is not
+    // taken into account
+    for (int i = 0; i < NFA_EE_NUM_ECBS; i++) {
+      if (nfa_ee_cb.ecb[i].nfcee_id == p_cb->nfcee_id) {
+        nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(&nfa_ee_cb.ecb[i]);
+        /* mark AID changed */
+        nfa_ee_cb.ecb[i].ecb_flags |= NFA_EE_ECB_FLAGS_AID;
+        break;
+      }
+    }
     nfa_ee_update_route_aid_size(p_cb);
     nfa_ee_start_timer();
   }
@@ -1382,6 +1394,18 @@ void nfa_ee_api_remove_aid(tNFA_EE_MSG* p_data) {
         nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_cb);
       }
     }
+
+    // Clear content of NFA_EE_CB_4_DH entry
+    tNFA_EE_ECB* p_ecb = &nfa_ee_cb.ecb[NFA_EE_CB_4_DH];
+    memset(&p_ecb->aid_cfg[0], 0x00, sizeof(p_ecb->aid_cfg));
+    memset(&p_ecb->aid_len[0], 0x00, max_aid_entries);
+    memset(&p_ecb->aid_pwr_cfg[0], 0x00, max_aid_entries);
+    memset(&p_ecb->aid_rt_info[0], 0x00, max_aid_entries);
+    p_ecb->aid_entries = 0;
+    p_ecb->size_aid = 0;
+
+    p_cb->ecb_flags |= NFA_EE_ECB_FLAGS_AID;
+    nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_ecb);
   } else {
     LOG(WARNING) << StringPrintf(
         "nfa_ee_api_remove_aid The AID entry is not in the database");
