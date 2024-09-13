@@ -295,20 +295,26 @@ static uint8_t nfa_dm_get_rf_discover_config(
 
   /* Check polling B' */
   if (dm_disc_mask & NFA_DM_DISC_MASK_P_B_PRIME) {
-    disc_params[num_params].type = NFC_DISCOVERY_TYPE_POLL_B_PRIME;
-    disc_params[num_params].frequency = p_nfa_dm_rf_disc_freq_cfg->pbp;
-    num_params++;
-
-    if (num_params >= max_params) return num_params;
+    if (NFC_DISCOVERY_TYPE_POLL_B_PRIME != NFA_PROTOCOL_INVALID) {
+      disc_params[num_params].type = NFC_DISCOVERY_TYPE_POLL_B_PRIME;
+      disc_params[num_params].frequency = p_nfa_dm_rf_disc_freq_cfg->pbp;
+      num_params++;
+      if (num_params >= max_params) return num_params;
+    } else {
+      LOG(ERROR) << StringPrintf("Unsupported type POLL_B_PRIME!");
+    }
   }
 
   /* Check polling KOVIO */
   if (dm_disc_mask & NFA_DM_DISC_MASK_P_KOVIO) {
-    disc_params[num_params].type = NFC_DISCOVERY_TYPE_POLL_KOVIO;
-    disc_params[num_params].frequency = p_nfa_dm_rf_disc_freq_cfg->pk;
-    num_params++;
-
-    if (num_params >= max_params) return num_params;
+    if (NFC_DISCOVERY_TYPE_POLL_KOVIO != NFA_PROTOCOL_INVALID) {
+      disc_params[num_params].type = NFC_DISCOVERY_TYPE_POLL_KOVIO;
+      disc_params[num_params].frequency = p_nfa_dm_rf_disc_freq_cfg->pk;
+      num_params++;
+      if (num_params >= max_params) return num_params;
+    } else {
+      LOG(ERROR) << StringPrintf("Unsupported type POLL_KOVIO!");
+    }
   }
 
   /* Check listening ISO 15693 */
@@ -322,11 +328,14 @@ static uint8_t nfa_dm_get_rf_discover_config(
 
   /* Check listening B' */
   if (dm_disc_mask & NFA_DM_DISC_MASK_L_B_PRIME) {
-    disc_params[num_params].type = NFC_DISCOVERY_TYPE_LISTEN_B_PRIME;
-    disc_params[num_params].frequency = 1;
-    num_params++;
-
-    if (num_params >= max_params) return num_params;
+    if (NFC_DISCOVERY_TYPE_LISTEN_B_PRIME != NFA_PROTOCOL_INVALID) {
+      disc_params[num_params].type = NFC_DISCOVERY_TYPE_LISTEN_B_PRIME;
+      disc_params[num_params].frequency = 1;
+      num_params++;
+      if (num_params >= max_params) return num_params;
+    } else {
+      LOG(ERROR) << StringPrintf("Unsupported type LISTEN_B_PRIME!");
+    }
   }
 
   return num_params;
@@ -1504,6 +1513,13 @@ static void nfa_dm_disc_notify_deactivation(tNFA_DM_RF_DISC_SM_EVENT sm_event,
         /* restart timer and do not notify upper layer */
         nfa_sys_start_timer(&nfa_dm_cb.disc_cb.kovio_tle, 0,
                             NFA_DM_DISC_TIMEOUT_KOVIO_PRESENCE_CHECK);
+        /* clear activated information */
+        nfa_dm_cb.disc_cb.activated_tech_mode = 0;
+        nfa_dm_cb.disc_cb.activated_rf_disc_id = 0;
+        nfa_dm_cb.disc_cb.activated_rf_interface = 0;
+        nfa_dm_cb.disc_cb.activated_protocol = NFA_PROTOCOL_INVALID;
+        nfa_dm_cb.disc_cb.activated_handle = NFA_HANDLE_INVALID;
+        nfa_dm_cb.disc_cb.deact_notify_pending = false;
         return;
       }
       /* Otherwise, upper layer initiated deactivation. */
@@ -2203,6 +2219,7 @@ static void nfa_dm_disc_sm_poll_active(tNFA_DM_RF_DISC_SM_EVENT event,
       (nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_CHECKING);
   bool sleep_wakeup_event = false;
   bool sleep_wakeup_event_processed = false;
+  tNFA_STATUS status;
 
   switch (event) {
     case NFA_DM_RF_DEACTIVATE_CMD:
@@ -2220,7 +2237,11 @@ static void nfa_dm_disc_sm_poll_active(tNFA_DM_RF_DISC_SM_EVENT event,
         nfa_dm_cb.disc_cb.deact_pending = true;
         nfa_dm_cb.disc_cb.pending_deact_type = p_data->deactivate_type;
       } else {
-        nfa_dm_send_deactivate_cmd(p_data->deactivate_type);
+        status = nfa_dm_send_deactivate_cmd(p_data->deactivate_type);
+        if (status != NFA_STATUS_OK) {
+          LOG(ERROR) << StringPrintf(
+              "%s; Error calling nfa_dm_send_deactivate_cmd()", __func__);
+        }
       }
 
       break;
