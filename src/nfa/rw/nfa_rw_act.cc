@@ -726,14 +726,21 @@ static void nfa_rw_handle_t1t_evt(tRW_EVENT event, tRW_DATA* p_rw_data) {
 static void nfa_rw_handle_t2t_evt(tRW_EVENT event, tRW_DATA* p_rw_data) {
   tNFA_CONN_EVT_DATA conn_evt_data;
 
+  uint8_t data_slp_req[] = {0x50, 0x00};
   conn_evt_data.status = p_rw_data->status;
 
   if (p_rw_data->status == NFC_STATUS_REJECTED) {
     LOG(VERBOSE) << StringPrintf(
-        "; Waking the tag first before handling the "
-        "response!");
+        "%s; Waking the tag first before handling the "
+        "response!",
+        __func__);
     /* Received NACK. Let DM wakeup the tag first (by putting tag to sleep and
      * then waking it up) */
+    // Needed to not allocate buffer that will never be freed
+    if (!(nfa_rw_cb.flags & NFA_RW_FL_API_BUSY)) {
+      NFA_SendRawFrame(data_slp_req, sizeof(data_slp_req), 0);
+      usleep(4000);
+    }
     p_rw_data->status = nfa_dm_disc_sleep_wakeup();
     if (p_rw_data->status == NFC_STATUS_OK) {
       nfa_rw_cb.halt_event = event;
