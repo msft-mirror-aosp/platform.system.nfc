@@ -393,6 +393,10 @@ void NfcAdaptation::GetVendorConfigs(
     configMap.emplace(NAME_OFF_HOST_ESE_PIPE_ID,
                       ConfigValue((uint8_t)aidlConfigValue.offHostESEPipeId));
 
+    if (aidlConfigValue.offHostSimPipeIds.size() != 0) {
+      configMap.emplace(NAME_OFF_HOST_SIM_PIPE_IDS,
+                        ConfigValue(aidlConfigValue.offHostSimPipeIds));
+    }
     configMap.emplace(NAME_ISO_DEP_MAX_TRANSCEIVE,
                       ConfigValue(aidlConfigValue.maxIsoDepTransceiveLength));
     if (aidlConfigValue.hostAllowlist.size() != 0) {
