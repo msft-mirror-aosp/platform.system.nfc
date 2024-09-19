@@ -898,6 +898,7 @@ static bool rw_t4t_read_file(uint32_t offset, uint32_t length,
     } else {
       LOG(ERROR) << StringPrintf("%s - Cannot read above 0x7FFF for MV2.0",
                                  __func__);
+      GKI_freebuf(p_c_apdu);
       return false;
     }
   } else {
@@ -1010,6 +1011,7 @@ static bool rw_t4t_update_file(void) {
   if (length == 0) {
     LOG(ERROR) << StringPrintf("%s - Length to write can not be null",
                                __func__);
+    GKI_freebuf(p_c_apdu);
     return false;
   }
 
@@ -1034,6 +1036,7 @@ static bool rw_t4t_update_file(void) {
     } else {
       LOG(ERROR) << StringPrintf("%s - Cannot write above 0x7FFF for MV2.0",
                                  __func__);
+      GKI_freebuf(p_c_apdu);
       return false;
     }
   } else {
@@ -1174,6 +1177,7 @@ static bool rw_t4t_select_application(uint8_t version) {
 
     p_c_apdu->len = T4T_CMD_MAX_HDR_SIZE + T4T_V20_NDEF_TAG_AID_LEN + 1;
   } else {
+    GKI_freebuf(p_c_apdu);
     return false;
   }
 
@@ -1837,6 +1841,10 @@ static void rw_t4t_sm_read_ndef(NFC_HDR* p_r_apdu) {
   uint16_t r_apdu_len;
   tRW_DATA rw_data;
 
+  if (p_r_apdu == nullptr) {
+    LOG(ERROR) << StringPrintf("%s; p_r_apdu is null, exiting", __func__);
+    return;
+  }
   LOG(VERBOSE) << StringPrintf(
       "%s - sub_state:%s (%d)", __func__,
       rw_t4t_get_sub_state_name(p_t4t->sub_state).c_str(), p_t4t->sub_state);
@@ -1916,7 +1924,7 @@ static void rw_t4t_sm_read_ndef(NFC_HDR* p_r_apdu) {
             /* Content read length coded over 2 bytes in 2nd and 3rd bytes
              * of BER-TLV length field*/
             r_apdu_len = (uint16_t)(*(p + 2) << 8);
-            r_apdu_len |= (uint8_t) * (p + 3);
+            r_apdu_len |= (uint16_t) * (p + 3);
             if (r_apdu_len <= (p_t4t->max_read_size - 4)) {
               p_r_apdu->len -= 4;
               p_r_apdu->offset += 4;

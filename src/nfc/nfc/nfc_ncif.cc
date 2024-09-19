@@ -381,6 +381,11 @@ bool nfc_ncif_process_event(NFC_HDR* p_msg) {
   uint16_t len;
   uint8_t *p_old, old_gid, old_oid, old_mt;
 
+  /* ignore all data while shutting down NFCC */
+  if (nfc_cb.nfc_state == NFC_STATE_W4_HAL_CLOSE) {
+    return free;
+  }
+
   p = (uint8_t*)(p_msg + 1) + p_msg->offset;
 
   if (p_msg->len < 3) {
@@ -1777,6 +1782,10 @@ void nfc_data_event(tNFC_CONN_CB* p_cb) {
       }
 
       p_evt = (NFC_HDR*)GKI_dequeue(&p_cb->rx_q);
+      if (p_evt == nullptr) {
+        LOG(ERROR) << StringPrintf("%s; p_evt is null", __func__);
+        return;
+      }
       /* report data event */
       p_evt->offset += NCI_MSG_HDR_SIZE;
       p_evt->len -= NCI_MSG_HDR_SIZE;
