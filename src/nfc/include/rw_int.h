@@ -595,6 +595,7 @@ typedef struct {
   uint32_t rw_offset;     /* remaining offset to read/write   */
 
   NFC_HDR* p_data_to_free; /* GKI buffet to delete after done  */
+  NFC_HDR* p_retry_cmd;    /* buffer to store cmd sent last    */
 
   tRW_T4T_CC cc_file; /* Capability Container File        */
 
@@ -638,6 +639,8 @@ typedef struct {
 #define MFC_NDEF_DETECTED 0x01
 #define MFC_NDEF_READ 0x02
 
+#define MFC_MAX_SECTOR_NUMBER 40
+#define MFC_LAST_4BLOCK_SECTOR 32
 typedef uint8_t tRW_MFC_RW_STATE;
 typedef uint8_t tRW_MFC_RW_SUBSTATE;
 typedef struct {
@@ -666,6 +669,8 @@ typedef struct {
   NFC_HDR* p_cur_cmd_buf; /* Copy of current command, for retx/send after sector
                              change */
 
+  bool mifare_ndefsector[MFC_MAX_SECTOR_NUMBER]; /* buffer to check ndef
+                                                    compatible sector */
   uint8_t ndef_status; /* bitmap for NDEF status */
 } tRW_MFC_CB;
 

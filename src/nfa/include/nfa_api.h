@@ -142,7 +142,6 @@ typedef uint8_t tNFA_NFC_PROTOCOL;
 #define NFA_PROTOCOL_MASK_T2T 0x02     /* MIFARE / Type 2 tag */
 #define NFA_PROTOCOL_MASK_T3T 0x04     /* FeliCa / Type 3 tag */
 #define NFA_PROTOCOL_MASK_ISO_DEP 0x08 /* ISODEP/4A,4B        */
-#define NFA_PROTOCOL_MASK_NFC_DEP 0x10 /* NFCDEP/LLCP         */
 typedef uint8_t tNFA_PROTOCOL_MASK;
 
 /* NFA_DM callback events */
@@ -259,6 +258,7 @@ typedef void(tNFA_DM_CBACK)(uint8_t event, tNFA_DM_CBACK_DATA* p_data);
 
 /* NFA Enable DTA Type Mode */
 typedef enum {
+  NFA_DTA_APPL_MODE = 0x00000000,
   NFA_DTA_DEFAULT_MODE = 0x00000001,
   NFA_DTA_LLCP_MODE = 0x00000002,
   NFA_DTA_HCEF_MODE = 0x00000004,
@@ -621,7 +621,6 @@ typedef tNFC_RF_COMM_PARAMS tNFA_RF_COMM_PARAMS;
 /* RF Interface type */
 #define NFA_INTERFACE_FRAME NFC_INTERFACE_FRAME
 #define NFA_INTERFACE_ISO_DEP NFC_INTERFACE_ISO_DEP
-#define NFA_INTERFACE_NFC_DEP NFC_INTERFACE_NFC_DEP
 #define NFA_INTERFACE_MIFARE NFC_INTERFACE_MIFARE
 typedef tNFC_INTF_TYPE tNFA_INTF_TYPE;
 
@@ -696,10 +695,27 @@ typedef void(tNFA_NDEF_CBACK)(tNFA_NDEF_EVT event, tNFA_NDEF_EVT_DATA* p_data);
 /* NFA VSC Callback */
 typedef void(tNFA_VSC_CBACK)(uint8_t event, uint16_t param_len,
                              uint8_t* p_param);
+/* Modes used by setNfcControllerAlwaysOn */
+#define ENABLE_MODE_DEFAULT 1
+#define ENABLE_MODE_TRANSPARENT 2
+#define ENABLE_MODE_EE 3
 
 /*****************************************************************************
 **  External Function Declarations
 *****************************************************************************/
+/*******************************************************************************
+**
+** Function         NFA_SetNfccMode
+**
+** Description      This function sets the control blocks nfcc mode
+**
+**                  mode ENABLE_MODE_DEFAULT or ENABLE_MODE_TRANSPARENT
+**                  or ENABLE_MODE_EE
+**
+** Returns          none
+**
+*******************************************************************************/
+extern void NFA_SetNfccMode(uint8_t mode);
 
 /*******************************************************************************
 **
@@ -717,6 +733,26 @@ typedef void(tNFA_VSC_CBACK)(uint8_t event, uint16_t param_len,
 **
 *******************************************************************************/
 extern void NFA_Init(tHAL_NFC_ENTRY* p_hal_entry_tbl);
+
+/*******************************************************************************
+**
+** Function         NFA_Partial_Init
+**
+** Description      This function initializes control blocks for NFA based on
+**                  mode
+**
+**                  p_hal_entry_tbl points to a table of HAL entry points
+**                  mode ENABLE_MODE_DEFAULT or ENABLE_MODE_TRANSPARENT
+**                  or ENABLE_MODE_EE
+**
+**                  NOTE: the buffer that p_hal_entry_tbl points must be
+**                  persistent until NFA is disabled.
+**
+**
+** Returns          none
+**
+*******************************************************************************/
+extern void NFA_Partial_Init(tHAL_NFC_ENTRY* p_hal_entry_tbl, uint8_t mode);
 
 /*******************************************************************************
 **
@@ -1256,6 +1292,17 @@ extern tNFA_STATUS NFA_SendRawVsCommand(uint8_t cmd_params_len,
 **
 *******************************************************************************/
 extern void NFA_EnableDtamode(tNFA_eDtaModes eDtaMode);
+
+/*******************************************************************************
+**
+** Function:        NFA_DisableDtamode
+**
+** Description:     Disable DTA Mode
+**
+** Returns:         none:
+**
+*******************************************************************************/
+extern void NFA_DisableDtamode(void);
 
 /*******************************************************************************
 ** Function         NFA_GetNCIVersion
