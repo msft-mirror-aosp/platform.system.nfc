@@ -522,13 +522,13 @@ void nfc_main_handle_hal_evt(tNFC_HAL_EVT_MSG* p_msg) {
           }
           break;
 
-        case HAL_HCI_NETWORK_RESET:
-          delete_stack_non_volatile_store(true);
-          break;
-
         default:
           break;
       }
+      break;
+
+    case HAL_HCI_NETWORK_RESET:
+      delete_stack_non_volatile_store(true);
       break;
 
     default:
