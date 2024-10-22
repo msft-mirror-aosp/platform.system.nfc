@@ -43,10 +43,6 @@
 
 using android::base::StringPrintf;
 
-#if (NFC_RW_ONLY == FALSE)
-static const uint8_t nfc_mpl_code_to_size[] = {64, 128, 192, 254};
-
-#endif /* NFC_RW_ONLY */
 #if (APPL_DTA_MODE == TRUE)
 // Global Structure varibale for FW Version
 static tNFC_FW_VERSION nfc_fw_version;
