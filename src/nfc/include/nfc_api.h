@@ -419,6 +419,10 @@ typedef uint8_t tNFC_BIT_RATE;
 #define NFC_INTERFACE_MIFARE NCI_INTERFACE_VS_MIFARE
 typedef tNCI_INTF_TYPE tNFC_INTF_TYPE;
 
+typedef tNCI_INTF_EXT_TYPE tNFC_INTF_EXT_TYPE;
+
+#define NFC_RF_INTF_EXT_START 0
+#define NFC_RF_INTF_EXT_STOP 1
 /**********************************************
  *  Deactivation Type
  **********************************************/
@@ -546,6 +550,8 @@ enum {
   NFC_SELECT_DEVT,                 /* Status of NFC_DiscoverySelect    */
   NFC_ACTIVATE_DEVT,               /* RF interface is activated        */
   NFC_DEACTIVATE_DEVT,             /* Status of RF deactivation        */
+  NFC_INTF_EXT_START_DEVT,         /* Status of NFC_StartRfIntfExtension */
+  NFC_INTF_EXT_STOP_DEVT,          /* Status of NFC_StopRfIntfExtension  */
   NFC_WPT_START_DEVT,              /* Status of NFC_StartPowerTransfert*/
   NFC_WPT_RESULT_DEVT,             /* Wireless Power Transfert ended   */
 };
@@ -625,6 +631,8 @@ typedef struct {
 /* the data type associated with NFC_SELECT_DEVT */
 typedef tNFC_STATUS tNFC_SELECT_DEVT;
 
+typedef tNFC_STATUS tNFC_INTF_EXT_START_DEVT;
+typedef tNFC_STATUS tNFC_INTF_EXT_STOP_DEVT;
 /* the data type associated with NFC_STOP_DEVT */
 typedef tNFC_STATUS tNFC_STOP_DEVT;
 
@@ -967,6 +975,44 @@ extern tNFC_STATUS NFC_DiscoveryStart(uint8_t num_params,
 *******************************************************************************/
 extern tNFC_STATUS NFC_DiscoverySelect(uint8_t rf_disc_id, uint8_t protocol,
                                        uint8_t rf_interface);
+
+/*******************************************************************************
+**
+** Function         NFC_StartRfIntfExtension
+**
+** Description      If tNFC_DISCOVER_CBACK reports status=NFC_MULTIPLE_PROT,
+**                  the application needs to use this function to select the
+**                  the logical endpoint to continue. The response from NFCC is
+**                  reported by tNFC_DISCOVER_CBACK as NFC_SELECT_DEVT.
+**
+** Parameters       rf_disc_id - The ID identifies the remote device.
+**                  protocol - the logical endpoint on the remote device
+**                  rf_interface - the RF interface to communicate with NFCC
+**
+** Returns          tNFC_STATUS
+**
+*******************************************************************************/
+extern tNFC_STATUS NFC_StartRfIntfExtension(uint8_t rf_ext_id, uint8_t* p_data,
+                                            uint8_t len);
+
+/*******************************************************************************
+**
+** Function         NFC_StopRfIntfExtension
+**
+** Description      If tNFC_DISCOVER_CBACK reports status=NFC_MULTIPLE_PROT,
+**                  the application needs to use this function to select the
+**                  the logical endpoint to continue. The response from NFCC is
+**                  reported by tNFC_DISCOVER_CBACK as NFC_SELECT_DEVT.
+**
+** Parameters       rf_disc_id - The ID identifies the remote device.
+**                  protocol - the logical endpoint on the remote device
+**                  rf_interface - the RF interface to communicate with NFCC
+**
+** Returns          tNFC_STATUS
+**
+*******************************************************************************/
+extern tNFC_STATUS NFC_StopRfIntfExtension(uint8_t rf_ext_id, uint8_t* p_data,
+                                           uint8_t len);
 
 /*******************************************************************************
 **

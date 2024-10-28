@@ -52,6 +52,7 @@ enum {
   NFA_DM_API_SET_RF_DISC_DURATION_EVT,
   NFA_DM_API_SELECT_EVT,
   NFA_DM_API_UPDATE_RF_PARAMS_EVT,
+  NFA_DM_API_START_REMOVAL_DETECT_EVT,
   NFA_DM_API_DEACTIVATE_EVT,
   NFA_DM_API_POWER_OFF_SLEEP_EVT,
   NFA_DM_API_REG_NDEF_HDLR_EVT,
@@ -131,6 +132,12 @@ typedef struct {
   NFC_HDR hdr;
   tNFA_RF_COMM_PARAMS params;
 } tNFA_DM_API_UPDATE_RF_PARAMS;
+
+/* data type for NFA_DM_API_START_REMOVAL_DETECT_EVT */
+typedef struct {
+  NFC_HDR hdr;
+  uint8_t waiting_time_int;
+} tNFA_DM_API_START_REMOVAL_DETECT;
 
 /* data type for NFA_DM_API_DEACTIVATE_EVT */
 typedef struct {
@@ -216,6 +223,8 @@ typedef union {
   tNFA_DM_API_SELECT select; /* NFA_DM_API_SELECT_EVT                */
   tNFA_DM_API_UPDATE_RF_PARAMS
       update_rf_params;              /* NFA_DM_API_UPDATE_RF_PARAMS_EVT      */
+  tNFA_DM_API_START_REMOVAL_DETECT
+      detect_removal_params;         /* NFA_DM_API_START_REMOVAL_DETECT_EVT  */
   tNFA_DM_API_DEACTIVATE deactivate; /* NFA_DM_API_DEACTIVATE_EVT            */
   tNFA_DM_API_SEND_VSC send_vsc;     /* NFA_DM_API_SEND_VSC_EVT              */
   tNFA_DM_API_REG_VSC reg_vsc;       /* NFA_DM_API_REG_VSC_EVT               */
@@ -227,15 +236,16 @@ typedef union {
 
 /* DM RF discovery state */
 enum {
-  NFA_DM_RFST_IDLE,               /* idle state                     */
-  NFA_DM_RFST_DISCOVERY,          /* discovery state                */
-  NFA_DM_RFST_W4_ALL_DISCOVERIES, /* wait for all discoveries state */
-  NFA_DM_RFST_W4_HOST_SELECT,     /* wait for host selection state  */
-  NFA_DM_RFST_POLL_ACTIVE,        /* poll mode activated state      */
-  NFA_DM_RFST_LISTEN_ACTIVE,      /* listen mode activated state    */
-  NFA_DM_RFST_LISTEN_SLEEP,       /* listen mode sleep state        */
-  NFA_DM_RFST_LP_LISTEN,          /* Listening in Low Power mode    */
-  NFA_DM_RFST_LP_ACTIVE           /* Activated in Low Power mode    */
+  NFA_DM_RFST_IDLE,                   /* idle state                     */
+  NFA_DM_RFST_DISCOVERY,              /* discovery state                */
+  NFA_DM_RFST_W4_ALL_DISCOVERIES,     /* wait for all discoveries state */
+  NFA_DM_RFST_W4_HOST_SELECT,         /* wait for host selection state  */
+  NFA_DM_RFST_POLL_ACTIVE,            /* poll mode activated state      */
+  NFA_DM_RFST_POLL_REMOVAL_DETECTION, /* poll removal detection state */
+  NFA_DM_RFST_LISTEN_ACTIVE,          /* listen mode activated state    */
+  NFA_DM_RFST_LISTEN_SLEEP,           /* listen mode sleep state        */
+  NFA_DM_RFST_LP_LISTEN,              /* Listening in Low Power mode    */
+  NFA_DM_RFST_LP_ACTIVE               /* Activated in Low Power mode    */
 };
 typedef uint8_t tNFA_DM_RF_DISC_STATE;
 
@@ -250,10 +260,18 @@ enum {
   NFA_DM_RF_DEACTIVATE_CMD,      /* deactivate RF interface               */
   NFA_DM_RF_DEACTIVATE_RSP,      /* deactivate response from NFCC         */
   NFA_DM_RF_DEACTIVATE_NTF,      /* deactivate RF interface NTF from NFCC */
-  NFA_DM_WPT_START_CMD,          /* start WPT phase                       */
-  NFA_DM_WPT_START_RSP,          /* start WPT response from NFCC          */
-  NFA_DM_LP_LISTEN_CMD,          /* NFCC is listening in low power mode   */
-  NFA_DM_CORE_INTF_ERROR_NTF,    /* RF interface error NTF from NFCC      */
+  NFA_DM_RF_INTF_EXT_START_CMD,  /* start RF interface extension          */
+  NFA_DM_RF_INTF_EXT_START_RSP,  /* start extension response from NFCC    */
+  NFA_DM_RF_INTF_EXT_STOP_CMD,   /* stop RF interface extension           */
+  NFA_DM_RF_INTF_EXT_STOP_RSP,   /* stop extension response from NFCC     */
+  NFA_DM_RF_REMOVAL_DETECT_START_CMD, /* start endpoint removal detection */
+  NFA_DM_RF_REMOVAL_DETECT_START_RSP, /* start removal detection RSP from NFCC
+                                       */
+  NFA_DM_RF_REMOVAL_DETECTION_NTF,    /* removal detection NTF from NFCC     */
+  NFA_DM_WPT_START_CMD,       /* start wireless power transfer phase   */
+  NFA_DM_WPT_START_RSP,       /* start WPT response from NFCC          */
+  NFA_DM_LP_LISTEN_CMD,       /* NFCC is listening in low power mode   */
+  NFA_DM_CORE_INTF_ERROR_NTF, /* RF interface error NTF from NFCC      */
   NFA_DM_DISC_SM_MAX_EVENT
 };
 typedef uint8_t tNFA_DM_RF_DISC_SM_EVENT;
@@ -265,6 +283,17 @@ typedef struct {
   tNFA_INTF_TYPE rf_interface;
 } tNFA_DM_DISC_SELECT_PARAMS;
 
+/* DM Removal Detection data */
+typedef struct {
+  uint8_t rf_intf_ext_id;
+  uint8_t cmd_params_len;
+  uint8_t* p_cmd_params;
+} tNFA_DM_DISC_RF_EXT_PARAMS;
+
+typedef struct {
+  uint8_t waiting_time;
+} tNFA_DM_DETECT_EP_REMOVAL_PARAMS;
+
 /* DM WPT data */
 typedef struct {
   uint8_t power_adj_req;
@@ -275,6 +304,9 @@ typedef union {
   tNFC_DISCOVER nfc_discover;        /* discovery data from NFCC    */
   tNFC_DEACT_TYPE deactivate_type;   /* deactivation type           */
   tNFA_DM_DISC_SELECT_PARAMS select; /* selected target information */
+  tNFA_DM_DISC_RF_EXT_PARAMS handle_ext; /* RF extension information */
+  /* Removal detection information */
+  tNFA_DM_DETECT_EP_REMOVAL_PARAMS detect_removal;
   tNFA_DM_DISC_WPT_START_PARAMS start_wpt; /*  start power transfer */
 } tNFA_DM_RF_DISC_DATA;
 
@@ -439,7 +471,9 @@ typedef struct {
 #define NFA_DM_FLAGS_LISTEN_DISABLED 0x00001000
 /* Power Off Sleep                                                      */
 #define NFA_DM_FLAGS_POWER_OFF_SLEEP 0x00008000
-
+/* stored parameters */
+/* Notification for RF Removal Detection is not reported yet            */
+#define NFA_DM_FLAGS_EP_REMOVAL_DETECT_PEND 0x00004000
 /* Response to WLC RF Interface Extension start is not reported yet     */
 #define NFA_DM_FLAGS_ENABLE_WLCP_PEND 0x00010000
 /* WLCP RF Extension is started                                         */
@@ -629,6 +663,7 @@ bool nfa_dm_act_stop_rf_discovery(tNFA_DM_MSG* p_data);
 bool nfa_dm_act_set_rf_disc_duration(tNFA_DM_MSG* p_data);
 bool nfa_dm_act_select(tNFA_DM_MSG* p_data);
 bool nfa_dm_act_update_rf_params(tNFA_DM_MSG* p_data);
+bool nfa_dm_act_start_removal_detection(tNFA_DM_MSG* p_data);
 bool nfa_dm_act_deactivate(tNFA_DM_MSG* p_data);
 bool nfa_dm_act_power_off_sleep(tNFA_DM_MSG* p_data);
 bool nfa_dm_ndef_reg_hdlr(tNFA_DM_MSG* p_data);
@@ -669,6 +704,7 @@ void nfa_dm_disc_new_state(tNFA_DM_RF_DISC_STATE new_state);
 void nfa_dm_start_rf_discover(void);
 void nfa_dm_rf_discover_select(uint8_t rf_disc_id, tNFA_NFC_PROTOCOL protocol,
                                tNFA_INTF_TYPE rf_interface);
+bool nfa_dm_rf_removal_detection(uint8_t waiting_time);
 tNFA_STATUS nfa_dm_rf_deactivate(tNFA_DEACTIVATE_TYPE deactivate_type);
 bool nfa_dm_is_protocol_supported(tNFA_NFC_PROTOCOL protocol, uint8_t sel_res);
 bool nfa_dm_is_active(void);
@@ -678,6 +714,8 @@ bool nfa_dm_is_raw_frame_session(void);
 
 bool nfa_dm_get_nfc_secure();
 void nfa_dm_get_tech_route_block(uint8_t* listen_techmask, bool* enable);
+void nfa_dm_start_rf_intf_ext(tNFA_INTF_EXT_TYPE extension, uint8_t* p_data,
+                              uint8_t len);
 void nfa_dm_start_wireless_power_transfer(uint8_t power_adj_req,
                                           uint8_t wpt_time_int);
 bool nfa_dm_act_change_discovery_tech(tNFA_DM_MSG* p_data);

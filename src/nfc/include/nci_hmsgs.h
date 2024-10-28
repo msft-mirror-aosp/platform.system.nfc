@@ -69,6 +69,8 @@ uint8_t nci_snd_get_routing_cmd(void);
 uint8_t nci_snd_nfcee_power_link_control(uint8_t nfcee_id, uint8_t pl_config);
 #endif
 
+uint8_t nci_snd_rf_extension_control_cmd(uint8_t mode, uint8_t rf_ext_id,
+                                         uint8_t* p_data, uint8_t data_len);
 uint8_t nci_snd_rf_wpt_control_cmd(uint8_t* p_param_tlvs, uint8_t tlv_size);
 uint8_t nci_snd_android_get_caps_cmd(void);
 
