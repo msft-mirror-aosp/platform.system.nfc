@@ -327,6 +327,8 @@ typedef enum {
 #define NFA_LISTEN_DISABLED_EVT 37
 /* T2T command completed */
 #define NFA_T2T_CMD_CPLT_EVT 40
+/* RF Interface Extension result event */
+#define NFA_RF_INTF_EXT_RESULT_EVT 43
 
 /* NFC deactivation type */
 #define NFA_DEACTIVATE_TYPE_IDLE NFC_DEACTIVATE_TYPE_IDLE
@@ -631,6 +633,7 @@ typedef tNFC_RF_COMM_PARAMS tNFA_RF_COMM_PARAMS;
 #define NFA_INTERFACE_ISO_DEP NFC_INTERFACE_ISO_DEP
 #define NFA_INTERFACE_MIFARE NFC_INTERFACE_MIFARE
 typedef tNFC_INTF_TYPE tNFA_INTF_TYPE;
+typedef tNFC_INTF_EXT_TYPE tNFA_INTF_EXT_TYPE;
 
 /*******************************************************************************
 ** NDEF Definitions

@@ -214,6 +214,18 @@ void nci_proc_rf_management_rsp(NFC_HDR* p_msg) {
       nfc_ncif_proc_isodep_nak_presence_check_status(*pp, false);
       break;
 
+    case NCI_MSG_RF_INTF_EXT_START:
+      /* Reset flag to allow again NCI Data transmission */
+      nfc_cb.flags &= ~NFC_FL_WAIT_RF_INTF_EXT_RSP;
+      nfc_ncif_rf_management_status(NFC_INTF_EXT_START_DEVT, *pp);
+      break;
+
+    case NCI_MSG_RF_INTF_EXT_STOP:
+      /* Reset flag to allow again NCI Data transmission */
+      nfc_cb.flags &= ~NFC_FL_WAIT_RF_INTF_EXT_RSP;
+      nfc_ncif_rf_management_status(NFC_INTF_EXT_STOP_DEVT, *pp);
+      break;
+
     case NCI_MSG_WPT_START:
       nfc_ncif_rf_management_status(NFC_WPT_START_DEVT, *pp);
       break;

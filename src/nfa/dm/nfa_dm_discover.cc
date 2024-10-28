@@ -723,6 +723,12 @@ static void nfa_dm_disc_discovery_cback(tNFC_DISCOVER_EVT event,
       } else
         dm_disc_event = NFA_DM_RF_DEACTIVATE_RSP;
       break;
+    case NFC_INTF_EXT_START_DEVT:
+      dm_disc_event = NFA_DM_RF_INTF_EXT_START_RSP;
+      break;
+    case NFC_INTF_EXT_STOP_DEVT:
+      dm_disc_event = NFA_DM_RF_INTF_EXT_STOP_RSP;
+      break;
     case NFC_WPT_START_DEVT:
       dm_disc_event = NFA_DM_WPT_START_RSP;
       break;
@@ -1083,6 +1089,54 @@ static void nfa_dm_notify_discovery(tNFA_DM_RF_DISC_DATA* p_data) {
          sizeof(tNFC_RESULT_DEVT));
 
   nfa_dm_conn_cback_event_notify(NFA_DISC_RESULT_EVT, &conn_evt);
+}
+
+/*******************************************************************************
+**
+** Function         nfa_dm_start_rf_intf_ext
+**
+** Description      Send RF interface extension to NFCC
+**
+** Returns          void
+**
+*******************************************************************************/
+void nfa_dm_start_rf_intf_ext(tNFA_INTF_EXT_TYPE extension_id, uint8_t* p_data,
+                              uint8_t len) {
+  tNFA_DM_DISC_RF_EXT_PARAMS start_ext_params;
+
+  LOG(VERBOSE) << StringPrintf(
+      "%s; rf_ext_id:0x%X, Start Parameter length:0x%X", __func__, extension_id,
+      len);
+
+  if ((extension_id != NCI_INTF_EXT_WLCP_NON_AUTO) &&
+      (extension_id != NCI_INTF_EXT_WLCP_SEMI_AUTO)) {
+    LOG(ERROR) << StringPrintf("%s; Not supported RF Interface Extension",
+                               __func__);
+    return;
+  }
+
+  if ((nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_POLL_ACTIVE) ||
+      (nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_LISTEN_ACTIVE)) {
+    /* protocol stack only implementing RF interface extension for WLC so far */
+    nfa_dm_cb.flags |= NFA_DM_FLAGS_ENABLE_WLCP_PEND;
+
+    /* state is OK: notify the status when the response is received from NFCC */
+    start_ext_params.rf_intf_ext_id = extension_id;
+    start_ext_params.p_cmd_params = p_data;
+    start_ext_params.cmd_params_len = len;
+
+    nfa_dm_cb.disc_cb.disc_flags |= NFA_DM_DISC_FLAGS_NOTIFY;
+    tNFA_DM_RF_DISC_DATA nfa_dm_rf_ext_data;
+    nfa_dm_rf_ext_data.handle_ext = start_ext_params;
+    nfa_dm_disc_sm_execute(NFA_DM_RF_INTF_EXT_START_CMD, &nfa_dm_rf_ext_data);
+  } else {
+    nfa_dm_cb.flags &= ~NFA_DM_FLAGS_ENABLE_WLCP_PEND;
+
+    tNFA_WLC_EVT_DATA wlc_cback_data;
+    /* Wrong state: notify failed status right away */
+    wlc_cback_data.status = NFA_STATUS_FAILED;
+    nfa_wlc_event_notify(NFA_WLC_START_RESULT_EVT, &wlc_cback_data);
+  }
 }
 
 /*******************************************************************************
@@ -2308,6 +2362,67 @@ static void nfa_dm_disc_sm_poll_active(tNFA_DM_RF_DISC_SM_EVENT event,
       }
       break;
 
+    case NFA_DM_RF_INTF_EXT_START_CMD:
+      /* if no deactivation ongoing */
+      if (!(nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_RSP)) {
+        NFC_StartRfIntfExtension(p_data->handle_ext.rf_intf_ext_id,
+                                 p_data->handle_ext.p_cmd_params,
+                                 p_data->handle_ext.cmd_params_len);
+
+      } else {
+        LOG(VERBOSE) << StringPrintf(
+            "%s; Fail to start "
+            "RF extension, deactivation ongoing",
+            __func__);
+        if (nfa_dm_cb.flags & NFA_DM_FLAGS_ENABLE_WLCP_PEND) {
+          nfa_dm_cb.flags &= ~NFA_DM_FLAGS_ENABLE_WLCP_PEND;
+
+          tNFA_WLC_EVT_DATA wlc_cback_data;
+          /* Wrong state: notify failed status right away */
+          wlc_cback_data.status = NFA_STATUS_FAILED;
+          nfa_wlc_event_notify(NFA_WLC_START_RESULT_EVT, &wlc_cback_data);
+        } else {
+          nfa_dm_disc_conn_event_notify(NFA_RF_INTF_EXT_RESULT_EVT,
+                                        NFA_STATUS_FAILED);
+        }
+      }
+      break;
+
+    case NFA_DM_RF_INTF_EXT_START_RSP:
+      if (nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_NOTIFY) {
+        nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_NOTIFY;
+
+        /* notify application status of start */
+        if (nfa_dm_cb.flags & NFA_DM_FLAGS_ENABLE_WLCP_PEND) {
+          nfa_dm_cb.flags &= ~NFA_DM_FLAGS_ENABLE_WLCP_PEND;
+
+          tNFA_WLC_EVT_DATA wlc_cback_data;
+          if (p_data->nfc_discover.status == NFC_STATUS_OK) {
+            wlc_cback_data.status = NFA_STATUS_OK;
+            nfa_dm_cb.flags |= NFA_DM_FLAGS_RF_EXT_ACTIVE;
+            nfa_dm_cb.flags |= NFA_DM_FLAGS_WLCP_ENABLED;
+          } else {
+            wlc_cback_data.status = NFA_STATUS_FAILED;
+          }
+          nfa_wlc_event_notify(NFA_WLC_START_RESULT_EVT, &wlc_cback_data);
+
+        } else {
+          if (p_data->nfc_discover.status == NFA_STATUS_OK) {
+            nfa_dm_cb.flags |= NFA_DM_FLAGS_RF_EXT_ACTIVE;
+          }
+
+          nfa_dm_disc_conn_event_notify(NFA_RF_INTF_EXT_RESULT_EVT,
+                                        p_data->nfc_discover.status);
+        }
+      }
+      break;
+
+    case NFA_DM_RF_INTF_EXT_STOP_CMD:
+      break;
+
+    case NFA_DM_RF_INTF_EXT_STOP_RSP:
+      break;
+
     case NFA_DM_WPT_START_CMD:
       if (nfa_dm_cb.flags & NFA_DM_FLAGS_WLCP_ENABLED) {
         if (!(nfa_dm_cb.disc_cb.disc_flags & NFA_DM_DISC_FLAGS_W4_RSP)) {
@@ -2980,6 +3095,14 @@ static std::string nfa_dm_disc_event_2_str(uint8_t event) {
       return "NFA_DM_LP_LISTEN_CMD";
     case NFA_DM_CORE_INTF_ERROR_NTF:
       return "INTF_ERROR_NTF";
+    case NFA_DM_RF_INTF_EXT_START_CMD:
+      return "INTF_EXT_START_CMD";
+    case NFA_DM_RF_INTF_EXT_START_RSP:
+      return "INTF_EXT_START_RSP";
+    case NFA_DM_RF_INTF_EXT_STOP_CMD:
+      return "INTF_EXT_STOP_CMD";
+    case NFA_DM_RF_INTF_EXT_STOP_RSP:
+      return "INTF_EXT_STOP_RSP";
     case NFA_DM_WPT_START_CMD:
       return "WPT_START_CMD";
     case NFA_DM_WPT_START_RSP:

@@ -477,6 +477,57 @@ uint8_t nci_snd_discover_select_cmd(uint8_t rf_disc_id, uint8_t protocol,
 
 /*******************************************************************************
 **
+** Function         nci_snd_rf_extension_control_cmd
+**
+** Description      compose and send RF Management INTF EXT START or STOP
+*command
+**                  to command queue
+**
+** Returns          status
+**
+*******************************************************************************/
+uint8_t nci_snd_rf_extension_control_cmd(uint8_t mode, uint8_t rf_ext_id,
+                                         uint8_t* p_data, uint8_t data_len) {
+  NFC_HDR* p;
+  uint8_t* pp;
+  int size;
+
+  size = NCI_DISCOVER_PARAM_SIZE_EXT + data_len;
+
+  p = NCI_GET_CMD_BUF(size);
+  if (p == nullptr) return (NCI_STATUS_FAILED);
+
+  p->event = BT_EVT_TO_NFC_NCI;
+  p->len = NCI_MSG_HDR_SIZE + size;
+  p->offset = NCI_MSG_OFFSET_SIZE;
+  p->layer_specific = 0;
+  pp = (uint8_t*)(p + 1) + p->offset;
+
+  NCI_MSG_BLD_HDR0(pp, NCI_MT_CMD, NCI_GID_RF_MANAGE);
+  if (mode == NFC_RF_INTF_EXT_START) {
+    NCI_MSG_BLD_HDR1(pp, NCI_MSG_RF_INTF_EXT_START);
+  } else {
+    NCI_MSG_BLD_HDR1(pp, NCI_MSG_RF_INTF_EXT_STOP);
+  }
+  UINT8_TO_STREAM(pp, size);
+
+  /* Set Extension value */
+  UINT8_TO_STREAM(pp, rf_ext_id);
+  /* Parameter Length */
+  UINT8_TO_STREAM(pp, data_len);
+  /* Parameter */
+  ARRAY_TO_BE_STREAM(pp, p_data, data_len);
+
+  /* Set flag to reject NCI Data transmission till response
+     to command is received */
+  nfc_cb.flags |= NFC_FL_WAIT_RF_INTF_EXT_RSP;
+
+  nfc_ncif_send_cmd(p);
+  return (NCI_STATUS_OK);
+}
+
+/*******************************************************************************
+**
 ** Function         nci_snd_rf_wpt_control_cmd
 **
 ** Description      compose and send RF Management WPT_START command

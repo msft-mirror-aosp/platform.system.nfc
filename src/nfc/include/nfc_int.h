@@ -92,6 +92,9 @@ typedef uint8_t tNFC_STATE;
 #define NFC_FL_HAL_REQUESTED 0x0080
 /* Waiting for NFCEE Mode Set NTF                 */
 #define NFC_FL_WAIT_MODE_SET_NTF 0x0100
+/* Waiting for RF Interface Extension Start or
+ * Stop response before allowing NCI data again */
+#define NFC_FL_WAIT_RF_INTF_EXT_RSP 0x0200
 
 #define NFC_PEND_CONN_ID 0xFE
 #define NFC_CONN_ID_ID_MASK NCI_CID_MASK
