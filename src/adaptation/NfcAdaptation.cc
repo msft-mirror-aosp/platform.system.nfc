@@ -96,6 +96,7 @@ uint8_t appl_dta_mode_flag = 0x00;
 bool isDownloadFirmwareCompleted = false;
 bool use_aidl = false;
 uint8_t mute_tech_route_option = 0x00;
+unsigned int t5t_mute_legacy = 0;
 
 extern tNFA_DM_CFG nfa_dm_cfg;
 extern tNFA_PROPRIETARY_CFG nfa_proprietary_cfg;
@@ -392,6 +393,10 @@ void NfcAdaptation::GetVendorConfigs(
     configMap.emplace(NAME_OFF_HOST_ESE_PIPE_ID,
                       ConfigValue((uint8_t)aidlConfigValue.offHostESEPipeId));
 
+    if (aidlConfigValue.offHostSimPipeIds.size() != 0) {
+      configMap.emplace(NAME_OFF_HOST_SIM_PIPE_IDS,
+                        ConfigValue(aidlConfigValue.offHostSimPipeIds));
+    }
     configMap.emplace(NAME_ISO_DEP_MAX_TRANSCEIVE,
                       ConfigValue(aidlConfigValue.maxIsoDepTransceiveLength));
     if (aidlConfigValue.hostAllowlist.size() != 0) {
@@ -543,6 +548,11 @@ void NfcAdaptation::Initialize() {
     host_allowlist = NfcConfig::getBytes(NAME_DEVICE_HOST_ALLOW_LIST);
     nfa_hci_cfg.num_allowlist_host = host_allowlist.size();
     nfa_hci_cfg.p_allowlist = &host_allowlist[0];
+  }
+
+  if (NfcConfig::hasKey(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD)) {
+    t5t_mute_legacy =
+        NfcConfig::getUnsigned(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD);
   }
 
   verify_stack_non_volatile_store();
