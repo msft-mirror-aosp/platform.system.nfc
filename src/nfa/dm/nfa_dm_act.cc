@@ -259,7 +259,6 @@ static void nfa_dm_nfc_response_cback(tNFC_RESPONSE_EVT event,
   tNFA_DM_CBACK_DATA dm_cback_data;
   tNFA_CONN_EVT_DATA conn_evt;
   uint8_t dm_cback_evt;
-  uint8_t max_ee = 0;
 
   LOG(VERBOSE) << StringPrintf("%s(0x%x)", nfa_dm_nfc_revt_2_str(event).c_str(),
                              event);
@@ -269,14 +268,6 @@ static void nfa_dm_nfc_response_cback(tNFC_RESPONSE_EVT event,
 
       /* NFC stack enabled. Enable nfa sub-systems */
       if (p_data->enable.status == NFC_STATUS_OK) {
-        if (nfa_ee_max_ee_cfg != 0) {
-          if (nfa_dm_cb.get_max_ee) {
-            max_ee = nfa_dm_cb.get_max_ee();
-            if (max_ee) {
-              nfa_ee_max_ee_cfg = max_ee;
-            }
-          }
-        }
         /* Initialize NFA subsystems */
         nfa_sys_enable_subsystems();
       } else if (nfa_dm_cb.flags & NFA_DM_FLAGS_ENABLE_EVT_PEND) {
@@ -895,18 +886,6 @@ tNFA_STATUS nfa_dm_start_polling(void) {
       poll_disc_mask |= NFA_DM_DISC_MASK_P_LEGACY;
       poll_disc_mask |= NFA_DM_DISC_MASK_PA_MIFARE;
     }
-    if (NFC_GetNCIVersion() >= NCI_VERSION_2_0) {
-      if (poll_tech_mask & NFA_TECHNOLOGY_MASK_ACTIVE) {
-        poll_disc_mask |= NFA_DM_DISC_MASK_PACM_NFC_DEP;
-      }
-    } else {
-      if (poll_tech_mask & NFA_TECHNOLOGY_MASK_A_ACTIVE) {
-        poll_disc_mask |= NFA_DM_DISC_MASK_PAA_NFC_DEP;
-      }
-      if (poll_tech_mask & NFA_TECHNOLOGY_MASK_F_ACTIVE) {
-        poll_disc_mask |= NFA_DM_DISC_MASK_PFA_NFC_DEP;
-      }
-    }
     if (poll_tech_mask & NFA_TECHNOLOGY_MASK_B) {
       poll_disc_mask |= NFA_DM_DISC_MASK_PB_ISO_DEP;
     }
@@ -922,14 +901,6 @@ tNFA_STATUS nfa_dm_start_polling(void) {
     }
     if (poll_tech_mask & NFA_TECHNOLOGY_MASK_KOVIO) {
       poll_disc_mask |= NFA_DM_DISC_MASK_P_KOVIO;
-    }
-
-    if (!(nfc_cb.nci_interfaces & (1 << NCI_INTERFACE_NFC_DEP))) {
-      /* Remove NFC-DEP related Discovery mask, if NFC_DEP interface is not
-       * supported */
-      poll_disc_mask &=
-          ~(NFA_DM_DISC_MASK_PACM_NFC_DEP | NFA_DM_DISC_MASK_PAA_NFC_DEP |
-            NFA_DM_DISC_MASK_PFA_NFC_DEP | NFA_DM_DISC_MASK_PF_NFC_DEP);
     }
 
     nfa_dm_cb.poll_disc_handle = nfa_dm_add_rf_discover(
@@ -1173,6 +1144,7 @@ bool nfa_dm_act_start_rf_discovery(__attribute__((unused))
 *******************************************************************************/
 bool nfa_dm_act_stop_rf_discovery(__attribute__((unused)) tNFA_DM_MSG* p_data) {
   tNFA_CONN_EVT_DATA evt_data;
+  tNFA_DM_DISC_FLAGS disc_flags = nfa_dm_cb.disc_cb.disc_flags;
 
   LOG(VERBOSE) << __func__;
 
@@ -1196,6 +1168,9 @@ bool nfa_dm_act_stop_rf_discovery(__attribute__((unused)) tNFA_DM_MSG* p_data) {
       if (nfa_dm_cb.disc_cb.kovio_tle.in_use)
         nfa_sys_stop_timer(&nfa_dm_cb.disc_cb.kovio_tle);
       nfa_rw_stop_presence_check_timer();
+    } else {
+      // Stop RF discovery failed, need to restore flags
+      nfa_dm_cb.disc_cb.disc_flags = disc_flags;
     }
   }
   return true;
