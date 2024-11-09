@@ -202,6 +202,11 @@
 #define NCI_MAX_CONN_CBS 4
 #endif
 
+/* the maximum number of NCI connections allowed. 1-14 */
+#ifndef NCI_MAX_STATIC_CONN_CBS
+#define NCI_MAX_STATIC_CONN_CBS 2
+#endif
+
 /* Maximum number of NCI commands that the NFCC accepts without needing to wait
  * for response */
 #ifndef NCI_MAX_CMD_WINDOW
