@@ -236,7 +236,8 @@ void nfc_enabled(tNFC_STATUS nfc_status, NFC_HDR* p_init_rsp_msg) {
              NFC_NFCC_MAX_NUM_VS_INTERFACE);
     }
     /* four bytes below are consumed in the top expression */
-    evt_data.enable.max_conn = *p++;
+    // Max nb conn = nb static conn + max nb dynamic conn
+    evt_data.enable.max_conn = NCI_MAX_STATIC_CONN_CBS + *p++;
     STREAM_TO_UINT16(evt_data.enable.max_ce_table, p);
 #if (NFC_RW_ONLY == FALSE)
     nfc_cb.max_ce_table = evt_data.enable.max_ce_table;
