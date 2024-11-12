@@ -41,6 +41,7 @@ TEST_F(CrcChecksumTest, EmptyBuffer) {
   uint16_t result = crcChecksumCompute(buffer, sizeof(buffer));
   EXPECT_EQ(result, 0);
 }
+
 class CrcChecksumFileTest : public ::testing::Test {
  protected:
   void SetUp() override {}
