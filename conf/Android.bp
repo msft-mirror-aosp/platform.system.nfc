@@ -21,8 +21,36 @@ package {
     default_applicable_licenses: ["system_nfc_license"],
 }
 
-prebuilt_etc {
+soong_config_module_type {
+    name: "libnfc_nci_default_conf_prebuilt_etc",
+    module_type: "prebuilt_etc",
+    config_namespace: "libnfc_nci_default_conf",
+    variables: [
+        "product_type",
+    ],
+    properties: [
+        "src",
+    ],
+}
+
+soong_config_string_variable {
+    name: "product_type",
+    values: [
+        "wearable",
+    ],
+}
+
+libnfc_nci_default_conf_prebuilt_etc {
     name: "libnfc-nci.conf-default",
-    src: "libnfc-nci.conf",
+    soong_config_variables: {
+        product_type: {
+            wearable: {
+                src: "libnfc-nci.wearable.conf",
+            },
+            conditions_default: {
+                src: "libnfc-nci.conf",
+            },
+        },
+    },
     filename: "libnfc-nci.conf",
 }
