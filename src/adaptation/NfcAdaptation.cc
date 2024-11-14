@@ -555,6 +555,14 @@ void NfcAdaptation::Initialize() {
         NfcConfig::getUnsigned(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD);
   }
 
+  if (NfcConfig::hasKey(NAME_NFA_DM_LISTEN_ACTIVE_DEACT_NTF_TIMEOUT)) {
+    unsigned int value =
+        NfcConfig::getUnsigned(NAME_NFA_DM_LISTEN_ACTIVE_DEACT_NTF_TIMEOUT);
+    if (value > 0) {
+      nfa_dm_cfg.deact_ntf_listen_active_timeout = value * 1000;
+    }
+  }
+
   verify_stack_non_volatile_store();
   if (NfcConfig::hasKey(NAME_PRESERVE_STORAGE) &&
       NfcConfig::getUnsigned(NAME_PRESERVE_STORAGE) == 1) {
