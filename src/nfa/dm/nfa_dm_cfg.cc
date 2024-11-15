@@ -105,6 +105,7 @@ tNFA_PROPRIETARY_CFG nfa_proprietary_cfg = {
     0x77, /* NCI_DISCOVERY_TYPE_POLL_KOVIO */
     0x74, /* NCI_DISCOVERY_TYPE_POLL_B_PRIME */
     0xF4, /* NCI_DISCOVERY_TYPE_LISTEN_B_PRIME */
+    0x84, /* NCI_PROTOCOL_CI */
 };
 
 tNFA_PROPRIETARY_CFG* p_nfa_proprietary_cfg =
