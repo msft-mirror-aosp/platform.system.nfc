@@ -358,7 +358,8 @@ void NfcAdaptation::GetVendorConfigs(
         aidlConfigValue.nfaProprietaryCfg.protocolMifare,
         aidlConfigValue.nfaProprietaryCfg.discoveryPollKovio,
         aidlConfigValue.nfaProprietaryCfg.discoveryPollBPrime,
-        aidlConfigValue.nfaProprietaryCfg.discoveryListenBPrime};
+        aidlConfigValue.nfaProprietaryCfg.discoveryListenBPrime,
+        aidlConfigValue.nfaProprietaryCfg.protocolChineseId};
     configMap.emplace(NAME_NFA_PROPRIETARY_CFG, ConfigValue(nfaPropCfg));
     configMap.emplace(NAME_NFA_POLL_BAIL_OUT_MODE,
                       ConfigValue(aidlConfigValue.nfaPollBailOutMode ? 1 : 0));
@@ -540,6 +541,8 @@ void NfcAdaptation::Initialize() {
       nfa_proprietary_cfg.pro_discovery_b_prime_poll = p_config[7];
     if (p_config.size() > 8)
       nfa_proprietary_cfg.pro_discovery_b_prime_listen = p_config[8];
+    if (p_config.size() > 9)
+      nfa_proprietary_cfg.pro_protocol_chinese_id = p_config[9];
   }
 
   // Configure allowlist of HCI host ID's
