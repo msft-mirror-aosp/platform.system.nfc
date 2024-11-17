@@ -22,9 +22,8 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::pin::{pin, Pin};
 use std::task::Context;
 use std::task::Poll;
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
-use tokio::net::{tcp, TcpListener, TcpStream};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::net::{TcpListener, UnixListener};
 use tokio::select;
 use tokio::sync::mpsc;
 
@@ -40,19 +39,19 @@ type Id = u16;
 /// Read RF Control and Data packets received on the RF transport.
 /// Performs recombination of the segmented packets.
 pub struct RfReader {
-    socket: tcp::OwnedReadHalf,
+    socket: Pin<Box<dyn AsyncRead>>,
 }
 
 /// Write RF Control and Data packets received to the RF transport.
 /// Performs segmentation of the packets.
 pub struct RfWriter {
-    socket: tcp::OwnedWriteHalf,
+    socket: Pin<Box<dyn AsyncWrite>>,
 }
 
 impl RfReader {
-    /// Create a new RF reader from the TCP socket half.
-    pub fn new(socket: tcp::OwnedReadHalf) -> Self {
-        RfReader { socket }
+    /// Create a new RF reader from an `AsyncRead` implementation.
+    pub fn new(socket: impl AsyncRead + 'static) -> Self {
+        RfReader { socket: Box::pin(socket) }
     }
 
     /// Read a single RF packet from the reader.
@@ -74,9 +73,9 @@ impl RfReader {
 }
 
 impl RfWriter {
-    /// Create a new RF writer from the TCP socket half.
-    pub fn new(socket: tcp::OwnedWriteHalf) -> Self {
-        RfWriter { socket }
+    /// Create a new RF writer from an `AsyncWrite` implementation.
+    pub fn new(socket: impl AsyncWrite + 'static) -> Self {
+        RfWriter { socket: Box::pin(socket) }
     }
 
     /// Write a single RF packet to the writer.
@@ -112,7 +111,8 @@ pub struct Device {
 impl Device {
     fn nci(
         id: Id,
-        socket: TcpStream,
+        nci_rx: impl AsyncRead + 'static,
+        nci_tx: impl AsyncWrite + 'static,
         controller_rf_tx: mpsc::UnboundedSender<rf::RfPacket>,
     ) -> Device {
         let (rf_tx, rf_rx) = mpsc::unbounded_channel();
@@ -120,7 +120,6 @@ impl Device {
             id,
             rf_tx,
             task: Box::pin(async move {
-                let (nci_rx, nci_tx) = socket.into_split();
                 Controller::run(
                     id,
                     pin!(nci::Reader::new(nci_rx).into_stream()),
@@ -135,7 +134,8 @@ impl Device {
 
     fn rf(
         id: Id,
-        socket: TcpStream,
+        socket_rx: impl AsyncRead + 'static,
+        socket_tx: impl AsyncWrite + 'static,
         controller_rf_tx: mpsc::UnboundedSender<rf::RfPacket>,
     ) -> Device {
         let (rf_tx, mut rf_rx) = mpsc::unbounded_channel();
@@ -143,7 +143,6 @@ impl Device {
             id,
             rf_tx,
             task: Box::pin(async move {
-                let (socket_rx, socket_tx) = socket.into_split();
                 let mut rf_reader = RfReader::new(socket_rx);
                 let mut rf_writer = RfWriter::new(socket_tx);
 
@@ -295,34 +294,62 @@ struct Opt {
     rf_port: u16,
 }
 
+/// Abstraction between different server sources
+enum Listener {
+    Tcp(TcpListener),
+    #[allow(unused)]
+    Unix(UnixListener),
+}
+
+impl Listener {
+    async fn accept_split(
+        &self,
+    ) -> Result<(Pin<Box<dyn AsyncRead>>, Pin<Box<dyn AsyncWrite>>, String)> {
+        match self {
+            Listener::Tcp(tcp) => {
+                let (socket, addr) = tcp.accept().await?;
+                let (rx, tx) = socket.into_split();
+                Ok((Box::pin(rx), Box::pin(tx), format!("{}", addr)))
+            }
+            Listener::Unix(unix) => {
+                let (socket, addr) = unix.accept().await?;
+                let (rx, tx) = socket.into_split();
+                Ok((Box::pin(rx), Box::pin(tx), format!("{:?}", addr)))
+            }
+        }
+    }
+}
+
 async fn run() -> Result<()> {
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "debug"),
     );
 
     let opt: Opt = argh::from_env();
-    let nci_listener =
-        TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opt.nci_port)).await?;
-    let rf_listener =
-        TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opt.rf_port)).await?;
+    let nci_listener = Listener::Tcp(
+        TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opt.nci_port)).await?,
+    );
+    let rf_listener = Listener::Tcp(
+        TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opt.rf_port)).await?,
+    );
     let (rf_tx, mut rf_rx) = mpsc::unbounded_channel();
     let mut scene = Scene::new();
     info!("Listening for NCI connections at address 127.0.0.1:{}", opt.nci_port);
     info!("Listening for RF connections at address 127.0.0.1:{}", opt.rf_port);
     loop {
         select! {
-            result = nci_listener.accept() => {
-                let (socket, addr) = result?;
+            result = nci_listener.accept_split() => {
+                let (socket_rx, socket_tx, addr) = result?;
                 info!("Incoming NCI connection from {}", addr);
-                match scene.add_device(|id| Device::nci(id, socket, rf_tx.clone())) {
+                match scene.add_device(|id| Device::nci(id, socket_rx, socket_tx, rf_tx.clone())) {
                     Ok(id) => info!("Accepted NCI connection from {} in slot {}", addr, id),
                     Err(err) => error!("Failed to accept NCI connection from {}: {}", addr, err)
                 }
             },
-            result = rf_listener.accept() => {
-                let (socket, addr) = result?;
+            result = rf_listener.accept_split() => {
+                let (socket_rx, socket_tx, addr) = result?;
                 info!("Incoming RF connection from {}", addr);
-                match scene.add_device(|id| Device::rf(id, socket, rf_tx.clone())) {
+                match scene.add_device(|id| Device::rf(id, socket_rx, socket_tx, rf_tx.clone())) {
                     Ok(id) => info!("Accepted RF connection from {} in slot {}", addr, id),
                     Err(err) => error!("Failed to accept RF connection from {}: {}", addr, err)
                 }
