@@ -143,6 +143,32 @@ tNFA_DM_DISC_TECH_PROTO_MASK nfa_dm_change_poll_mask(
 
 /*******************************************************************************
 **
+** Function         nfa_dm_set_rf_field_ntf
+**
+** Description      Update RF_FIELD_INFO_NTF status to NFCC
+**
+** Returns          void
+**
+*******************************************************************************/
+static void nfa_dm_set_rf_field_info_ntf(uint8_t val) {
+  uint8_t params[10], *p;
+
+  LOG(DEBUG) << StringPrintf("%s; val = 0x%x", __func__, val);
+
+  p = params;
+
+  /* for total duration */
+  UINT8_TO_STREAM(p, NFC_PMID_RF_FIELD_INFO);
+  UINT8_TO_STREAM(p, NCI_PARAM_LEN_RF_FIELD_INFO);
+  UINT8_TO_STREAM(p, val);
+
+  if (p > params) {
+    nfa_dm_check_set_config((uint8_t)(p - params), params, false);
+  }
+}
+
+/*******************************************************************************
+**
 ** Function         nfa_dm_get_rf_discover_config
 **
 ** Description      Build RF discovery configurations from
@@ -155,10 +181,11 @@ static uint8_t nfa_dm_get_rf_discover_config(
     tNFA_DM_DISC_TECH_PROTO_MASK dm_disc_mask,
     tNFC_DISCOVER_PARAMS disc_params[], uint8_t max_params) {
   uint8_t num_params = 0;
+  uint8_t rf_field_val;
 
   if (nfa_dm_cb.flags & NFA_DM_FLAGS_LISTEN_DISABLED) {
-    LOG(VERBOSE) << StringPrintf("listen disabled, rm listen from 0x%x",
-                                 dm_disc_mask);
+    LOG(VERBOSE) << StringPrintf("%s; listen disabled, rm listen from 0x%x",
+                                 __func__, dm_disc_mask);
     dm_disc_mask &= NFA_DM_DISC_MASK_POLL;
   }
 
@@ -171,6 +198,10 @@ static uint8_t nfa_dm_get_rf_discover_config(
     dm_disc_mask =
         nfa_dm_change_listen_mask(dm_disc_mask, dm_disc_listen_mask_dfl);
   }
+
+  // RF_FIELD_INFO_NTF needed only if some listen programmed
+  nfa_dm_set_rf_field_info_ntf((dm_disc_mask & NFA_DM_DISC_MASK_LISTEN) ? 0x01
+                                                                        : 0x00);
 
   if (nfa_dm_cb.flags & NFA_DM_FLAGS_POLL_TECH_CHANGED) {
     /* Check polling tech */
