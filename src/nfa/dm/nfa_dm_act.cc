@@ -50,6 +50,9 @@ using android::base::StringPrintf;
 #define NFA_DM_DISABLE_TIMEOUT_VAL 1000
 #endif
 
+extern tNFA_TECHNOLOGY_MASK dm_disc_listen_mask_dfl;
+extern tNFA_TECHNOLOGY_MASK dm_disc_poll_mask_dfl;
+
 static void nfa_dm_set_init_nci_params(void);
 static tNFA_STATUS nfa_dm_start_polling(void);
 static bool nfa_dm_deactivate_polling(void);
@@ -1724,6 +1727,22 @@ bool nfa_dm_act_change_discovery_tech(tNFA_DM_MSG* p_data) {
   nfa_dm_cb.change_poll_mask = p_data->change_discovery_tech.change_poll_mask;
   nfa_dm_cb.change_listen_mask =
       p_data->change_discovery_tech.change_listen_mask;
+
+  if (nfa_dm_cb.flags & NFA_DM_FLAGS_DEFAULT_TECH_CHANGED) {
+    if (nfa_dm_cb.flags & NFA_DM_FLAGS_LISTEN_TECH_CHANGED) {
+      dm_disc_listen_mask_dfl = nfa_dm_cb.change_listen_mask;
+    } else if (nfa_dm_cb.change_listen_mask == 0xff) {
+      dm_disc_listen_mask_dfl = 0;
+    }
+    LOG(DEBUG) << StringPrintf("%s; dm_disc_listen_mask_dfl: 0x%x", __func__,
+                               dm_disc_listen_mask_dfl);
+    if (nfa_dm_cb.flags & NFA_DM_FLAGS_POLL_TECH_CHANGED) {
+      dm_disc_poll_mask_dfl = nfa_dm_cb.change_poll_mask;
+    } else if (nfa_dm_cb.change_poll_mask == 0xff) {
+      dm_disc_poll_mask_dfl = 0;
+    }
+  }
+
   evt_data.status = NFA_STATUS_OK;
   nfa_dm_conn_cback_event_notify(NFA_LISTEN_ENABLED_EVT, &evt_data);
 
