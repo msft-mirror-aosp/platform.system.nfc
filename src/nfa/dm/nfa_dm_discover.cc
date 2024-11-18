@@ -68,8 +68,8 @@ extern uint8_t mute_tech_route_option;
 /*
 ** static parameters
 */
-static tNFA_TECHNOLOGY_MASK dm_disc_listen_mask_dfl = 0;
-static tNFA_TECHNOLOGY_MASK dm_disc_poll_mask_dfl = 0;
+tNFA_TECHNOLOGY_MASK dm_disc_listen_mask_dfl = 0;
+tNFA_TECHNOLOGY_MASK dm_disc_poll_mask_dfl = 0;
 
 tNFA_DM_DISC_TECH_PROTO_MASK nfa_dm_change_listen_mask(
     tNFA_DM_DISC_TECH_PROTO_MASK dm_disc_mask,
@@ -160,19 +160,6 @@ static uint8_t nfa_dm_get_rf_discover_config(
     LOG(VERBOSE) << StringPrintf("listen disabled, rm listen from 0x%x",
                                  dm_disc_mask);
     dm_disc_mask &= NFA_DM_DISC_MASK_POLL;
-  }
-
-  if (nfa_dm_cb.flags & NFA_DM_FLAGS_DEFAULT_TECH_CHANGED) {
-    if (nfa_dm_cb.flags & NFA_DM_FLAGS_LISTEN_TECH_CHANGED) {
-      dm_disc_listen_mask_dfl = nfa_dm_cb.change_listen_mask;
-    } else if (nfa_dm_cb.change_listen_mask == 0xff) {
-      dm_disc_listen_mask_dfl = 0;
-    }
-    if (nfa_dm_cb.flags & NFA_DM_FLAGS_POLL_TECH_CHANGED) {
-      dm_disc_poll_mask_dfl = nfa_dm_cb.change_poll_mask;
-    } else if (nfa_dm_cb.change_poll_mask == 0xff) {
-      dm_disc_poll_mask_dfl = 0;
-    }
   }
 
   if (nfa_dm_cb.flags & NFA_DM_FLAGS_LISTEN_TECH_CHANGED) {
