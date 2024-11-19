@@ -76,7 +76,9 @@ tNFA_DM_CFG nfa_dm_cfg = {
     /* Use sleep/wake(last interface) for ISODEP presence check */
     NFA_DM_PRESENCE_CHECK_OPTION,
     /* Maximum time to wait for presence check response */
-    NFA_DM_MAX_PRESENCE_CHECK_TIMEOUT};
+    NFA_DM_MAX_PRESENCE_CHECK_TIMEOUT,
+    /* timeout for rf deactivate in rf listen active state */
+    NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF};
 
 tNFA_DM_CFG* p_nfa_dm_cfg = (tNFA_DM_CFG*)&nfa_dm_cfg;
 
