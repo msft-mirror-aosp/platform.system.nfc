@@ -373,12 +373,6 @@ enum {
 /* NFA_EE_MAX_TECH_ROUTE. only A, B, F, Bprime are supported by UICC now */
 #define NFA_DM_MAX_TECH_ROUTE 4
 
-/* timeout for waiting deactivation NTF,
-** possible delay to send deactivate CMD if all credit wasn't returned
-** transport delay (1sec) and max RWT (5sec)
-*/
-#define NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF (NFC_DEACTIVATE_TIMEOUT * 1000 + 6000)
-
 typedef struct {
   uint16_t disc_duration; /* Disc duration                                    */
   tNFA_DM_DISC_FLAGS disc_flags;    /* specific action flags */
@@ -499,6 +493,8 @@ typedef struct {
   uint8_t atr_res_gen_bytes_len;
 
   uint8_t pf_rc[NCI_PARAM_LEN_PF_RC];
+  uint8_t rf_field_info[NCI_PARAM_LEN_RF_FIELD_INFO];
+  uint8_t rf_field_info_len;
 } tNFA_DM_PARAMS;
 
 /*
@@ -553,6 +549,7 @@ typedef struct {
   /* NFCC power mode */
   uint8_t nfcc_pwr_mode; /* NFA_DM_PWR_MODE_FULL or NFA_DM_PWR_MODE_OFF_SLEEP */
 
+  tNFC_DEACT_TYPE listen_deact_cmd_type;
   uint8_t deactivate_cmd_retry_count; /*number of times the deactivation cmd
                                          sent in case of error scenerio */
 
