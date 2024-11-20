@@ -17,6 +17,7 @@ cc_test {
         "system/nfc/src/gki/common",
         "system/nfc/src/gki/ulinux",
         "system/nfc/src/nfa/include",
+        "system/nfc/src/nfa/ce",
     ],
     cflags: [
         "-Wall",
