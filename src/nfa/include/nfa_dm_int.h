@@ -373,12 +373,6 @@ enum {
 /* NFA_EE_MAX_TECH_ROUTE. only A, B, F, Bprime are supported by UICC now */
 #define NFA_DM_MAX_TECH_ROUTE 4
 
-/* timeout for waiting deactivation NTF,
-** possible delay to send deactivate CMD if all credit wasn't returned
-** transport delay (1sec) and max RWT (5sec)
-*/
-#define NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF (NFC_DEACTIVATE_TIMEOUT * 1000 + 6000)
-
 typedef struct {
   uint16_t disc_duration; /* Disc duration                                    */
   tNFA_DM_DISC_FLAGS disc_flags;    /* specific action flags */
