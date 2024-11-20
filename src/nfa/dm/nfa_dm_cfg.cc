@@ -76,7 +76,9 @@ tNFA_DM_CFG nfa_dm_cfg = {
     /* Use sleep/wake(last interface) for ISODEP presence check */
     NFA_DM_PRESENCE_CHECK_OPTION,
     /* Maximum time to wait for presence check response */
-    NFA_DM_MAX_PRESENCE_CHECK_TIMEOUT};
+    NFA_DM_MAX_PRESENCE_CHECK_TIMEOUT,
+    /* timeout for rf deactivate in rf listen active state */
+    NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF};
 
 tNFA_DM_CFG* p_nfa_dm_cfg = (tNFA_DM_CFG*)&nfa_dm_cfg;
 
@@ -105,6 +107,7 @@ tNFA_PROPRIETARY_CFG nfa_proprietary_cfg = {
     0x77, /* NCI_DISCOVERY_TYPE_POLL_KOVIO */
     0x74, /* NCI_DISCOVERY_TYPE_POLL_B_PRIME */
     0xF4, /* NCI_DISCOVERY_TYPE_LISTEN_B_PRIME */
+    0x84, /* NCI_PROTOCOL_CI */
 };
 
 tNFA_PROPRIETARY_CFG* p_nfa_proprietary_cfg =
