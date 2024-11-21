@@ -285,9 +285,9 @@ void nfa_t4tnfcee_store_cc_info(NFC_HDR* p_data) {
  *******************************************************************************/
 void nfa_t4tnfcee_store_rx_buf(NFC_HDR* p_data) {
   uint8_t* p;
-  LOG(DEBUG) << StringPrintf("%s copying data len %d  rd_offset: %d", __func__,
-                             p_data->len, nfa_t4tnfcee_cb.rd_offset);
   if (NULL != p_data) {
+    LOG(DEBUG) << StringPrintf("%s copying data len %d  rd_offset: %d", __func__,
+                                p_data->len, nfa_t4tnfcee_cb.rd_offset);
     p = (uint8_t*)(p_data + 1) + p_data->offset;
     memcpy(&nfa_t4tnfcee_cb.p_dataBuf[nfa_t4tnfcee_cb.rd_offset], p,
            p_data->len);
