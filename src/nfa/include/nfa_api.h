@@ -542,6 +542,8 @@ typedef struct {
   uint8_t presence_check_option;
   /* Maximum time to wait for presence check response         */
   uint16_t presence_check_timeout;
+  /* timeout for rf deactivate in rf listen active state      */
+  uint16_t deact_ntf_listen_active_timeout;
 } tNFA_DM_CFG;
 
 /* compile-time configuration structure for HCI */

@@ -393,6 +393,8 @@ void NfcAdaptation::GetVendorConfigs(
                       ConfigValue((uint8_t)aidlConfigValue.offHostSIMPipeId));
     configMap.emplace(NAME_OFF_HOST_ESE_PIPE_ID,
                       ConfigValue((uint8_t)aidlConfigValue.offHostESEPipeId));
+    configMap.emplace(NAME_T4T_NFCEE_ENABLE,
+                      ConfigValue(aidlConfigValue.t4tNfceeEnable ? 1 : 0));
 
     if (aidlConfigValue.offHostSimPipeIds.size() != 0) {
       configMap.emplace(NAME_OFF_HOST_SIM_PIPE_IDS,
@@ -556,6 +558,14 @@ void NfcAdaptation::Initialize() {
   if (NfcConfig::hasKey(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD)) {
     t5t_mute_legacy =
         NfcConfig::getUnsigned(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD);
+  }
+
+  if (NfcConfig::hasKey(NAME_NFA_DM_LISTEN_ACTIVE_DEACT_NTF_TIMEOUT)) {
+    unsigned int value =
+        NfcConfig::getUnsigned(NAME_NFA_DM_LISTEN_ACTIVE_DEACT_NTF_TIMEOUT);
+    if (value > 0) {
+      nfa_dm_cfg.deact_ntf_listen_active_timeout = value * 1000;
+    }
   }
 
   verify_stack_non_volatile_store();

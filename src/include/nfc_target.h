@@ -429,6 +429,12 @@
 #define NFA_DM_DISC_TIMEOUT_KOVIO_PRESENCE_CHECK (1000)
 #endif
 
+/* timeout for waiting deactivation NTF,
+** possible delay to send deactivate CMD if all credit wasn't returned
+** transport delay (1sec) and max RWT (5sec)
+*/
+#define NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF (NFC_DEACTIVATE_TIMEOUT * 1000 + 6000)
+
 /* Max number of NDEF type handlers that can be registered (including the
  * default handler) */
 #ifndef NFA_NDEF_MAX_HANDLERS

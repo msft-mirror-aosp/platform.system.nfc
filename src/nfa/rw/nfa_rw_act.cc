@@ -726,14 +726,21 @@ static void nfa_rw_handle_t1t_evt(tRW_EVENT event, tRW_DATA* p_rw_data) {
 static void nfa_rw_handle_t2t_evt(tRW_EVENT event, tRW_DATA* p_rw_data) {
   tNFA_CONN_EVT_DATA conn_evt_data;
 
+  uint8_t data_slp_req[] = {0x50, 0x00};
   conn_evt_data.status = p_rw_data->status;
 
   if (p_rw_data->status == NFC_STATUS_REJECTED) {
     LOG(VERBOSE) << StringPrintf(
-        "; Waking the tag first before handling the "
-        "response!");
+        "%s; Waking the tag first before handling the "
+        "response!",
+        __func__);
     /* Received NACK. Let DM wakeup the tag first (by putting tag to sleep and
      * then waking it up) */
+    // Needed to not allocate buffer that will never be freed
+    if (!(nfa_rw_cb.flags & NFA_RW_FL_API_BUSY)) {
+      NFA_SendRawFrame(data_slp_req, sizeof(data_slp_req), 0);
+      usleep(4000);
+    }
     p_rw_data->status = nfa_dm_disc_sleep_wakeup();
     if (p_rw_data->status == NFC_STATUS_OK) {
       nfa_rw_cb.halt_event = event;
@@ -1890,6 +1897,10 @@ void nfa_rw_presence_check(tNFA_RW_MSG* p_data) {
   bool unsupported = false;
   uint8_t option = NFA_RW_OPTION_INVALID;
   tNFA_RW_PRES_CHK_OPTION op_param = NFA_RW_PRES_CHK_DEFAULT;
+  uint8_t data_slp_req[] = {0x50, 0x00};
+  NFC_HDR* p_msg;
+  uint16_t size;
+  uint8_t* p;
 
   if (NFC_PROTOCOL_T1T == protocol) {
     /* Type1Tag    - NFC-A */
@@ -1952,6 +1963,24 @@ void nfa_rw_presence_check(tNFA_RW_MSG* p_data) {
     } else {
       /* Let DM perform presence check (by putting tag to sleep and then waking
        * it up) */
+      // Need to send DESELECT before putting the T2T tag to sleep
+      if (NFC_PROTOCOL_T2T == protocol) {
+        size = NFC_HDR_SIZE + NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE +
+               sizeof(data_slp_req);
+
+        p_msg = (NFC_HDR*)GKI_getbuf(size);
+        if (p_msg != nullptr) {
+          p_msg->layer_specific = 0;
+          p_msg->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
+          p_msg->len = sizeof(data_slp_req);
+
+          p = (uint8_t*)(p_msg + 1) + p_msg->offset;
+          memcpy(p, data_slp_req, sizeof(data_slp_req));
+
+          NFC_SendData(NFC_RF_CONN_ID, p_msg);
+          usleep(4000);
+        }
+      }
       status = nfa_dm_disc_sleep_wakeup();
     }
   }
