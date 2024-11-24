@@ -17,13 +17,14 @@
 use anyhow::Result;
 use argh::FromArgs;
 use log::{error, info, warn};
+use rustutils::inherited_fd;
 use std::future::Future;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::pin::{pin, Pin};
 use std::task::Context;
 use std::task::Poll;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, UnixListener};
 use tokio::select;
 use tokio::sync::mpsc;
 
@@ -235,6 +236,7 @@ impl Scene {
                         reason: rf::DeactivateReason::RfLinkLoss,
                         sender: id,
                         receiver: device.id,
+                        power_level: 255,
                         technology: rf::Technology::NfcA,
                         protocol: rf::Protocol::Undetermined,
                     }
@@ -286,43 +288,107 @@ impl Future for Scene {
 #[derive(FromArgs, Debug)]
 /// Nfc emulator.
 struct Opt {
-    #[argh(option, default = "7000")]
+    #[argh(option)]
     /// configure the TCP port for the NCI server.
-    nci_port: u16,
-    #[argh(option, default = "7001")]
+    nci_port: Option<u16>,
+    #[argh(option)]
+    /// configure a preexisting unix server fd for the NCI server.
+    nci_unix_fd: Option<i32>,
+    #[argh(option)]
     /// configure the TCP port for the RF server.
-    rf_port: u16,
+    rf_port: Option<u16>,
+    #[argh(option)]
+    /// configure a preexisting unix server fd for the RF server.
+    rf_unix_fd: Option<i32>,
 }
 
+/// Abstraction between different server sources
+enum Listener {
+    Tcp(TcpListener),
+    #[allow(unused)]
+    Unix(UnixListener),
+}
+
+impl Listener {
+    async fn accept_split(
+        &self,
+    ) -> Result<(Pin<Box<dyn AsyncRead>>, Pin<Box<dyn AsyncWrite>>, String)> {
+        match self {
+            Listener::Tcp(tcp) => {
+                let (socket, addr) = tcp.accept().await?;
+                let (rx, tx) = socket.into_split();
+                Ok((Box::pin(rx), Box::pin(tx), format!("{}", addr)))
+            }
+            Listener::Unix(unix) => {
+                let (socket, addr) = unix.accept().await?;
+                let (rx, tx) = socket.into_split();
+                Ok((Box::pin(rx), Box::pin(tx), format!("{:?}", addr)))
+            }
+        }
+    }
+}
+
+#[tokio::main]
 async fn run() -> Result<()> {
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "debug"),
     );
 
     let opt: Opt = argh::from_env();
-    let nci_listener =
-        TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opt.nci_port)).await?;
-    let rf_listener =
-        TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, opt.rf_port)).await?;
+
+    let nci_listener = match (opt.nci_port, opt.nci_unix_fd) {
+        (None, Some(unix_fd)) => {
+            let owned_fd = inherited_fd::take_fd_ownership(unix_fd)?;
+            let nci_listener = std::os::unix::net::UnixListener::from(owned_fd);
+            nci_listener.set_nonblocking(true)?;
+            let nci_listener = UnixListener::from_std(nci_listener)?;
+            info!("Listening for NCI connections on fd {}", unix_fd);
+            Listener::Unix(nci_listener)
+        }
+        (port, None) => {
+            let port = port.unwrap_or(7000);
+            let nci_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
+            let nci_listener = TcpListener::bind(nci_addr).await?;
+            info!("Listening for NCI connections at address {}", nci_addr);
+            Listener::Tcp(nci_listener)
+        }
+        _ => anyhow::bail!("Specify at most one of `--nci-port` and `--nci-unix-fd`."),
+    };
+
+    let rf_listener = match (opt.rf_port, opt.rf_unix_fd) {
+        (None, Some(unix_fd)) => {
+            let owned_fd = inherited_fd::take_fd_ownership(unix_fd)?;
+            let nci_listener = std::os::unix::net::UnixListener::from(owned_fd);
+            nci_listener.set_nonblocking(true)?;
+            let nci_listener = UnixListener::from_std(nci_listener)?;
+            info!("Listening for RF connections on fd {}", unix_fd);
+            Listener::Unix(nci_listener)
+        }
+        (port, None) => {
+            let port = port.unwrap_or(7001);
+            let rf_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
+            let rf_listener = TcpListener::bind(rf_addr).await?;
+            info!("Listening for RF connections at address {}", rf_addr);
+            Listener::Tcp(rf_listener)
+        }
+        _ => anyhow::bail!("Specify at most one of `--rf-port` and `--rf-unix-fd`"),
+    };
+
     let (rf_tx, mut rf_rx) = mpsc::unbounded_channel();
     let mut scene = Scene::new();
-    info!("Listening for NCI connections at address 127.0.0.1:{}", opt.nci_port);
-    info!("Listening for RF connections at address 127.0.0.1:{}", opt.rf_port);
     loop {
         select! {
-            result = nci_listener.accept() => {
-                let (socket, addr) = result?;
+            result = nci_listener.accept_split() => {
+                let (socket_rx, socket_tx, addr) = result?;
                 info!("Incoming NCI connection from {}", addr);
-                let (socket_rx, socket_tx) = socket.into_split();
                 match scene.add_device(|id| Device::nci(id, socket_rx, socket_tx, rf_tx.clone())) {
                     Ok(id) => info!("Accepted NCI connection from {} in slot {}", addr, id),
                     Err(err) => error!("Failed to accept NCI connection from {}: {}", addr, err)
                 }
             },
-            result = rf_listener.accept() => {
-                let (socket, addr) = result?;
+            result = rf_listener.accept_split() => {
+                let (socket_rx, socket_tx, addr) = result?;
                 info!("Incoming RF connection from {}", addr);
-                let (socket_rx, socket_tx) = socket.into_split();
                 match scene.add_device(|id| Device::rf(id, socket_rx, socket_tx, rf_tx.clone())) {
                     Ok(id) => info!("Accepted RF connection from {} in slot {}", addr, id),
                     Err(err) => error!("Failed to accept RF connection from {}: {}", addr, err)
@@ -337,7 +403,8 @@ async fn run() -> Result<()> {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    run().await
+fn main() -> Result<()> {
+    // Safety: First function call in the `main` function, before any other library calls
+    unsafe { inherited_fd::init_once()? };
+    run()
 }

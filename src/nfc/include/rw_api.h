@@ -37,6 +37,7 @@
 #define RW_T4T_FIRST_EVT 0x80
 #define RW_I93_FIRST_EVT 0xA0
 #define RW_MFC_FIRST_EVT 0xC0
+#define RW_CI_FIRST_EVT 0xD0
 
 enum {
   /* Note: the order of these events can not be changed */
@@ -139,7 +140,12 @@ enum {
 
   RW_MFC_RAW_FRAME_EVT,  /* Response of raw frame sent               */
   RW_MFC_INTF_ERROR_EVT, /* RF Interface error event                 */
-  RW_MFC_MAX_EVT
+  RW_MFC_MAX_EVT,
+  RW_CI_PRESENCE_CHECK_EVT = RW_CI_FIRST_EVT,
+  RW_CI_INTF_ERROR_EVT,
+  RW_CI_RAW_FRAME_EVT,
+  RW_CI_CPLT_EVT,
+  RW_CI_MAX_EVT
 };
 
 #define RW_RAW_FRAME_EVT 0xFF
@@ -258,6 +264,11 @@ typedef struct {
   NFC_HDR* p_data;
 } tRW_RAW_FRAME;
 
+typedef struct {
+  uint8_t mbi;
+  uint8_t uid[8];
+} t_RW_CI_INFO;
+
 typedef union {
   tNFC_STATUS status;
   tRW_T3T_POLL t3t_poll;           /* Response to t3t poll command          */
@@ -271,6 +282,7 @@ typedef union {
   tRW_I93_DATA i93_data;           /* ISO 15693 Data response           */
   tRW_I93_SYS_INFO i93_sys_info;   /* ISO 15693 System Information      */
   tRW_I93_CMD_CMPL i93_cmd_cmpl;   /* ISO 15693 Command complete        */
+  t_RW_CI_INFO ci_info;
 } tRW_DATA;
 
 typedef void(tRW_CBACK)(tRW_EVENT event, tRW_DATA* p_data);
@@ -1410,6 +1422,182 @@ extern tNFC_STATUS RW_MfcDetectNDef(void);
 **
 *******************************************************************************/
 extern tNFC_STATUS RW_MfcReadNDef(uint8_t* p_buffer, uint16_t buf_len);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeSelectApplication
+**
+** Description      Selects T4T application using T4T AID
+**
+** Returns          NFC_STATUS_OK if success else NFC_STATUS_FAILED
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeSelectApplication(void);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeUpdateCC
+**
+** Description      Updates the T4T data structures with CC info
+**
+** Returns          None
+**
+*******************************************************************************/
+void RW_T4tNfceeUpdateCC(uint8_t* ccInfo);
+
+/*******************************************************************************
+**
+** Function         rw_ci_select
+**
+** Description      This function send Select command for Chinese Id card.
+**
+** Returns          NFC_STATUS_OK if success
+**
+*******************************************************************************/
+extern tNFC_STATUS rw_ci_select(void);
+
+/*****************************************************************************
+**
+** Function         RW_CiPresenceCheck
+**
+** Description
+**      Check if the tag is still in the field.
+**
+**      The RW_CI_PRESENCE_CHECK_EVT w/ status is used to indicate presence
+**      or non-presence.
+**
+** Returns
+**      NFC_STATUS_OK, if raw data frame sent
+**      NFC_STATUS_NO_BUFFERS: unable to allocate a buffer for this operation
+**      NFC_STATUS_FAILED: other error
+**
+*****************************************************************************/
+extern tNFC_STATUS RW_CiPresenceCheck(void);
+
+/*****************************************************************************
+**
+** Function         RW_CiSendAttrib
+**
+** Description
+**      Send the Attrib to the Endpoint.
+**
+** Returns
+**      NFC_STATUS_OK, if raw data frame sent
+**      NFC_STATUS_NO_BUFFERS: unable to allocate a buffer for this operation
+**      NFC_STATUS_FAILED: other error
+**
+*****************************************************************************/
+extern tNFC_STATUS RW_CiSendAttrib(uint8_t* nfcid0);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeSelectFile
+**
+** Description      Selects T4T Nfcee File
+**
+** Returns          NFC_STATUS_OK if success
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeSelectFile(uint16_t fileId);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeReadDataLen
+**
+** Description      Reads proprietary data Len
+**
+** Returns          NFC_STATUS_OK if success
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeReadDataLen();
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeStartUpdateFile
+**
+** Description      starts writing data to the currently selected file
+**
+** Returns          NFC_STATUS_OK if success
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeStartUpdateFile(uint16_t length, uint8_t* p_data);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeUpdateFile
+**
+** Description      writes requested data to the currently selected file
+**
+** Returns          NFC_STATUS_OK if success else NFC_STATUS_FAILED
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeUpdateFile();
+
+/*******************************************************************************
+**
+** Function         RW_T4tIsUpdateComplete
+**
+** Description      Return true if no more data to write
+**
+** Returns          true/false
+**
+*******************************************************************************/
+extern bool RW_T4tIsUpdateComplete(void);
+
+/*******************************************************************************
+**
+** Function         RW_T4tIsReadComplete
+**
+** Description      Return true if no more data to be read
+**
+** Returns          true/false
+**
+*******************************************************************************/
+extern bool RW_T4tIsReadComplete(void);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeReadFile
+**
+** Description      Reads T4T Nfcee File
+**
+** Returns          NFC_STATUS_OK if success
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeReadFile(uint16_t offset, uint16_t Readlen);
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeReadPendingData
+**
+** Description      Reads pending data from T4T Nfcee File
+**
+** Returns          NFC_STATUS_OK if success else NFC_STATUS_FAILED
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeReadPendingData();
+
+/*******************************************************************************
+**
+** Function         RW_T4tNfceeUpdateNlen
+**
+** Description      writes requested length to the file
+**
+** Returns          NFC_STATUS_OK if success
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_T4tNfceeUpdateNlen(uint16_t len);
+
+/*******************************************************************************
+**
+** Function         RW_SetT4tNfceeInfo
+**
+** Description      This function sets callbacks for T4t operations.
+**
+** Returns          tNFC_STATUS
+**
+*******************************************************************************/
+extern tNFC_STATUS RW_SetT4tNfceeInfo(tRW_CBACK* p_cback, uint8_t conn_id);
 
 /*****************************************************************************
 **
