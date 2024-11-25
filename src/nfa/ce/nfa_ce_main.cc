@@ -23,7 +23,6 @@
  ******************************************************************************/
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
-
 #include <string>
 
 #include "nfa_ce_api.h"
