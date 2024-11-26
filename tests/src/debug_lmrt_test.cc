@@ -26,7 +26,6 @@ public:
 
 // Global instance of the mock logger
 MockLogger mock_logger_instance;
-
 // Redefine the logging function to use the mock
 void logVerbose(const std::string& message) {
     mock_logger_instance.logVerbose(message);
@@ -37,6 +36,9 @@ protected:
     void SetUp() override {
         // Reset mock expectations before each test
         EXPECT_CALL(mock_logger_instance, logVerbose).Times(0);
+    }
+    void TearDown() override {
+        testing::Mock::AllowLeak(&mock_logger_instance);
     }
 };
 
