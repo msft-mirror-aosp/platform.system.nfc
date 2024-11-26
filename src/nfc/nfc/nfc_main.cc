@@ -33,6 +33,7 @@
 #include "gki.h"
 #include "nci_hmsgs.h"
 #include "nfa_sys.h"
+#include "nfc_api.h"
 #include "nfc_int.h"
 #include "nfc_target.h"
 #include "rw_int.h"
@@ -236,7 +237,8 @@ void nfc_enabled(tNFC_STATUS nfc_status, NFC_HDR* p_init_rsp_msg) {
              NFC_NFCC_MAX_NUM_VS_INTERFACE);
     }
     /* four bytes below are consumed in the top expression */
-    evt_data.enable.max_conn = *p++;
+    // Max nb conn = nb static conn + max nb dynamic conn
+    evt_data.enable.max_conn = NCI_MAX_STATIC_CONN_CBS + *p++;
     STREAM_TO_UINT16(evt_data.enable.max_ce_table, p);
 #if (NFC_RW_ONLY == FALSE)
     nfc_cb.max_ce_table = evt_data.enable.max_ce_table;
@@ -1083,6 +1085,32 @@ void NFC_SetStaticRfCback(tNFC_CONN_CBACK* p_cback) {
   /* just in case DH has received NCI data before the data callback is set
    * check if there's any data event to report on this connection id */
   nfc_data_event(p_cb);
+}
+
+/*******************************************************************************
+**
+** Function         NFC_SetStaticT4tNfceeCback
+**
+** Description      This function is called to update the data callback function
+**                  to receive the data for the given connection id.
+**
+** Parameters       p_cback - the connection callback function
+**                  connId - connection ID for T4T NFCEE
+**
+** Returns          Nothing
+**
+*******************************************************************************/
+void NFC_SetStaticT4tNfceeCback(tNFC_CONN_CBACK* p_cback, uint8_t connId) {
+  // tNFC_CONN_CB * p_cb = &nfc_cb.conn_cb[];
+  tNFC_CONN_CB* p_cb = nfc_find_conn_cb_by_conn_id(connId);
+  if (p_cb != NULL) {
+    p_cb->p_cback = p_cback;
+    /* just in case DH has received NCI data before the data callback is set
+     * check if there's any data event to report on this connection id */
+    nfc_data_event(p_cb);
+    LOG(DEBUG) << StringPrintf("%s = %p, p_cb->p_cback = %p", __func__, p_cb,
+                               p_cb->p_cback);
+  }
 }
 
 /*******************************************************************************

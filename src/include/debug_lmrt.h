@@ -29,7 +29,7 @@ typedef struct lmrt_payload_t {
   std::vector<uint8_t> more;
   std::vector<uint8_t> entry_count;
   std::vector<std::vector<uint8_t>> tlvs;
-} __attribute__((__packed__)) lmrt_payload_t;
+}__attribute__((__packed__)) lmrt_payload_t;
 
 /*******************************************************************************
 **

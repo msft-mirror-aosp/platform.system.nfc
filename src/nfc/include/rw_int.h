@@ -823,6 +823,14 @@ typedef struct {
   bool in_pres_check;
 } tRW_I93_CB;
 
+typedef uint8_t tRW_CI_RW_STATE;
+typedef struct {
+  tRW_CI_RW_STATE state; /* main state                       */
+  TIMER_LIST_ENT timer;  /* timeout for each sent command    */
+  uint8_t sent_cmd;      /* last sent command                */
+  uint8_t attrib_res[2];
+  uint8_t uid[8];
+} tRW_CI_CB;
 /* RW memory control blocks */
 typedef union {
   tRW_T1T_CB t1t;
@@ -831,6 +839,7 @@ typedef union {
   tRW_T4T_CB t4t;
   tRW_I93_CB i93;
   tRW_MFC_CB mfc;
+  tRW_CI_CB ci;
 } tRW_TCB;
 
 /* RW callback type */
@@ -882,6 +891,7 @@ extern tNFC_STATUS rw_t1t_send_static_cmd(uint8_t opcode, uint8_t add,
                                           uint8_t dat);
 extern void rw_t1t_process_timeout(TIMER_LIST_ENT* p_tle);
 extern void rw_t1t_handle_op_complete(void);
+extern tNFC_STATUS RW_T4tNfceeInitCb(void);
 
 #if (RW_NDEF_INCLUDED == TRUE)
 extern tRW_EVENT rw_t2t_info_to_event(const tT2T_CMD_RSP_INFO* p_info);
@@ -918,6 +928,7 @@ extern void rw_t5t_sm_update_ndef(NFC_HDR*);
 extern void rw_t5t_sm_set_read_only(NFC_HDR*);
 
 extern void rw_t4t_handle_isodep_nak_rsp(uint8_t status, bool is_ntf);
+extern void rw_ci_process_timeout(TIMER_LIST_ENT* p_tle);
 
 extern tNFC_STATUS rw_mfc_select(uint8_t selres, uint8_t uid[T1T_CMD_UID_LEN]);
 extern void rw_mfc_process_timeout(TIMER_LIST_ENT* p_tle);

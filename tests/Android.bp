@@ -13,6 +13,11 @@ cc_test {
     include_dirs: [
         "system/nfc/src/include",
         "system/nfc/utils/include",
+        "system/nfc/src/nfc/include",
+        "system/nfc/src/gki/common",
+        "system/nfc/src/gki/ulinux",
+        "system/nfc/src/nfa/include",
+        "system/nfc/src/nfa/ce",
     ],
     cflags: [
         "-Wall",
@@ -38,9 +43,27 @@ cc_test {
         "libgmock",
         "libnfc-nci",
         "libnfcutils",
+        "android.hardware.nfc@1.0",
+        "android.hardware.nfc@1.1",
+        "android.hardware.nfc@1.2",
+        // Add for AIDL
+        "android.hardware.nfc-V2-ndk",
+        "libnfc-nci_flags",
+        "libstatslog_nfc",
     ],
     shared_libs: [
+        "libcutils",
+        "liblog",
+        "libdl",
+        "libz",
         "libbase",
+        // Treble configuration
+        "libhidlbase",
+        "libutils",
+        "libbinder_ndk",
+        "libstatssocket",
+        "server_configurable_flags",
+        "libaconfig_storage_read_api_cc",
     ],
     test_suites: [
         "general-tests",
