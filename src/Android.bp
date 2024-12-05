@@ -66,6 +66,7 @@ cc_library {
         "nfa/sys/*.cc",
         "nfa/wlc/*.cc",
         "nfc/nci/*.cc",
+        "nfa/ndefnfcee/t4t/*.cc",
         "nfc/ndef/*.cc",
         "nfc/nfc/*.cc",
         "nfc/tags/*.cc",
@@ -90,6 +91,7 @@ cc_library {
         "//apex_available:platform",
         "com.android.nfcservices",
     ],
+    min_sdk_version: "35", // Make it 36 once available.
 }
 
 cc_defaults {
@@ -163,6 +165,7 @@ cc_library {
         "//apex_available:platform",
         "com.android.nfcservices",
     ],
+    min_sdk_version: "35", // Make it 36 once available.
 }
 
 genrule {
@@ -280,6 +283,7 @@ cc_fuzz {
         "nfa/ee/*.cc",
         "nfa/hci/*.cc",
         "nfa/rw/*.cc",
+        "nfa/ndefnfcee/t4t/*.cc",
         "nfa/sys/*.cc",
         "nfa/wlc/*.cc",
         "nfc/nci/*.cc",

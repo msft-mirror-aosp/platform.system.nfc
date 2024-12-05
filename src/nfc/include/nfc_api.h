@@ -375,6 +375,7 @@ extern uint8_t NFC_GetNCIVersion();
 #define NFC_PROTOCOL_T5T NFC_PROTOCOL_T5T_(NFC_GetNCIVersion())
 #define NFC_PROTOCOL_T5T_(x) \
   (((x) >= NCI_VERSION_2_0) ? NCI_PROTOCOL_T5T : NCI_PROTOCOL_15693)
+#define NFC_PROTOCOL_CI NCI_PROTOCOL_CI
 /* Type 4A,4B  - NFC-A or NFC-B   */
 #define NFC_PROTOCOL_ISO_DEP NCI_PROTOCOL_ISO_DEP
 /* NFCDEP/LLCP - NFC-A or NFC-F       */
@@ -774,6 +775,7 @@ typedef void(tNFC_CONN_CBACK)(uint8_t conn_id, tNFC_CONN_EVT event,
 #define NFC_RF_CONN_ID 0
 /* the static connection ID for HCI transport */
 #define NFC_HCI_CONN_ID 1
+#define NFC_T4TNFCEE_CONN_ID 0x05
 
 /*****************************************************************************
 **  EXTERNAL FUNCTION DECLARATIONS
@@ -1034,6 +1036,21 @@ extern tNFC_STATUS NFC_ConnClose(uint8_t conn_id);
 **
 *******************************************************************************/
 extern void NFC_SetStaticRfCback(tNFC_CONN_CBACK* p_cback);
+
+/*******************************************************************************
+**
+** Function         NFC_SetStaticT4tNfceeCback
+**
+** Description      This function is called to update the data callback function
+**                  to receive the data for the given connection id.
+**
+** Parameters       p_cback - the connection callback function
+**                  connId - connection ID for T4T NFCEE
+**
+** Returns          Nothing
+**
+*******************************************************************************/
+void NFC_SetStaticT4tNfceeCback(tNFC_CONN_CBACK* p_cback, uint8_t connId);
 
 /*******************************************************************************
 **

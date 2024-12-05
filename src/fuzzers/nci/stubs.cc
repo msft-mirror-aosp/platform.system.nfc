@@ -29,6 +29,7 @@ void rw_t3t_handle_nci_poll_ntf(uint8_t nci_status, uint8_t num_responses,
           BytesToHex(p_sensf_res_buf, sensf_res_buf_size).c_str());
 }
 
+void rw_ci_process_timeout(TIMER_LIST_ENT*) { abort(); }
 void rw_t1t_process_timeout(TIMER_LIST_ENT*) { abort(); }
 void rw_t2t_process_timeout() { abort(); }
 void rw_t3t_process_timeout(TIMER_LIST_ENT*) { abort(); }
