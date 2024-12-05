@@ -27,6 +27,7 @@
 #include <android-base/stringprintf.h>
 #include <fcntl.h>
 #include <log/log.h>
+#include <pthread.h>
 #include <statslog_nfc.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -56,6 +57,7 @@ extern std::string nfc_storage_path;
 
 static struct timeval timer_start;
 static struct timeval timer_end;
+static pthread_mutex_t cache_flush = PTHREAD_MUTEX_INITIALIZER;
 
 /*******************************************************************************
 **
@@ -291,6 +293,10 @@ void nfc_ncif_check_cmd_queue(NFC_HDR* p_buf) {
       /* Indicate command is pending */
       nfc_cb.nci_cmd_window--;
 
+      // Make sure the caches are consistent with other threads here.
+      (void)pthread_mutex_lock(&cache_flush);
+      (void)pthread_mutex_unlock(&cache_flush);
+
       /* send to HAL */
       nfcsnoop_capture(p_buf, false);
       HAL_WRITE(p_buf);
@@ -381,6 +387,10 @@ bool nfc_ncif_process_event(NFC_HDR* p_msg) {
   if (nfc_cb.nfc_state == NFC_STATE_W4_HAL_CLOSE) {
     return free;
   }
+
+  // Make sure the caches are consistent with other threads here.
+  (void)pthread_mutex_lock(&cache_flush);
+  (void)pthread_mutex_unlock(&cache_flush);
 
   p = (uint8_t*)(p_msg + 1) + p_msg->offset;
 

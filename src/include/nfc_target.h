@@ -202,6 +202,11 @@
 #define NCI_MAX_CONN_CBS 4
 #endif
 
+/* the maximum number of NCI connections allowed. 1-14 */
+#ifndef NCI_MAX_STATIC_CONN_CBS
+#define NCI_MAX_STATIC_CONN_CBS 2
+#endif
+
 /* Maximum number of NCI commands that the NFCC accepts without needing to wait
  * for response */
 #ifndef NCI_MAX_CMD_WINDOW
@@ -297,6 +302,9 @@
 /* CE Type 4 Tag, Frame Waiting time Integer */
 #ifndef CE_T4T_ISO_DEP_FWI
 #define CE_T4T_ISO_DEP_FWI 7
+#ifndef RW_CI_TOUT_RESP
+#define RW_CI_TOUT_RESP 1000
+#endif
 #endif
 
 /* RW Type 4 Tag timeout for each API call, in ms */
@@ -420,6 +428,12 @@
 #ifndef NFA_DM_DISC_TIMEOUT_KOVIO_PRESENCE_CHECK
 #define NFA_DM_DISC_TIMEOUT_KOVIO_PRESENCE_CHECK (1000)
 #endif
+
+/* timeout for waiting deactivation NTF,
+** possible delay to send deactivate CMD if all credit wasn't returned
+** transport delay (1sec) and max RWT (5sec)
+*/
+#define NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF (NFC_DEACTIVATE_TIMEOUT * 1000 + 6000)
 
 /* Max number of NDEF type handlers that can be registered (including the
  * default handler) */
