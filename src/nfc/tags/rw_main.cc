@@ -301,13 +301,43 @@ tNFC_STATUS RW_SetActivatedTagType(tNFC_ACTIVATE_DEVT* p_activate_params,
           p_activate_params->rf_tech_param.param.pa.nfcid1 +
               p_activate_params->rf_tech_param.param.pa.nfcid1_len - 4);
     }
-  }
-  /* TODO set up callback for proprietary protocol */
-  else {
+  } else if ((NFC_PROTOCOL_UNKNOWN == p_activate_params->protocol) &&
+             (p_activate_params->rf_tech_param.mode ==
+              NFC_DISCOVERY_TYPE_POLL_B)) {
+    status = rw_ci_select();
+  } else {
     rw_cb.tcb_type = RW_CB_TYPE_UNKNOWN;
     LOG(ERROR) << StringPrintf("RW_SetActivatedTagType Invalid protocol");
   }
 
   if (status != NFC_STATUS_OK) rw_cb.p_cback = nullptr;
+  return status;
+}
+
+/*******************************************************************************
+**
+** Function         RW_SetT4tNfceeInfo
+**
+** Description      This function selects the T4t Nfcee  for Reader/Writer mode.
+**
+** Returns          tNFC_STATUS
+**
+*******************************************************************************/
+tNFC_STATUS RW_SetT4tNfceeInfo(tRW_CBACK* p_cback, uint8_t conn_id) {
+  tNFC_STATUS status = NFC_STATUS_FAILED;
+  /* Reset tag-specific area of control block */
+  LOG(ERROR) << StringPrintf("RW_SetActivatedTagType %d ", conn_id);
+
+  memset(&rw_cb.tcb, 0, sizeof(tRW_TCB));
+
+  if (p_cback != NULL) {
+    rw_cb.p_cback = p_cback;
+    status = RW_T4tNfceeInitCb();
+    if (status != NFC_STATUS_OK) {
+      rw_cb.p_cback = NULL;
+    }
+  } else {
+    rw_cb.p_cback = NULL;
+  }
   return status;
 }
