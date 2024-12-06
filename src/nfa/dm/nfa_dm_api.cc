@@ -29,6 +29,7 @@
 #include "ndef_utils.h"
 #include "nfa_api.h"
 #include "nfa_ce_int.h"
+#include "nfa_nfcee_int.h"
 #include "nfa_wlc_int.h"
 #include "nfc_int.h"
 
@@ -118,6 +119,7 @@ void NFA_Init(tHAL_NFC_ENTRY* p_hal_entry_tbl) {
   nfa_ee_init();
   if (nfa_ee_max_ee_cfg != 0) {
     nfa_dm_cb.get_max_ee = p_hal_entry_tbl->get_max_ee;
+    nfa_t4tnfcee_init();
     nfa_hci_init();
   }
   nfa_wlc_init();
@@ -1248,6 +1250,20 @@ void NFA_DisableDtamode(void) {
   LOG(VERBOSE) << StringPrintf("%s: enter", __func__);
   appl_dta_mode_flag = 0x0;
   nfa_dm_cb.eDtaMode = NFA_DTA_APPL_MODE;
+}
+
+/*******************************************************************************
+**
+** Function:        NFA_SetNfcSecure
+**
+** Description:     Prooagtes NFC secure settings to NFC TASK
+**
+** Returns:         none:
+**
+*******************************************************************************/
+void NFA_SetNfcSecure(bool status) {
+  LOG(DEBUG) << StringPrintf("%s; status: %d", __func__, status);
+  nfa_dm_cb.is_nfc_secure = status;
 }
 
 /*******************************************************************************
