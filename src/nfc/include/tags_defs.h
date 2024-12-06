@@ -372,6 +372,8 @@ typedef uint8_t tT3T_POLL_RC;
  * with Lc and Le coded using Extended Field Coding */
 #define T4T_CMD_MAX_EXT_HDR_SIZE 15
 
+/* CLA, INS, P1, P2, Le on 3 bytes (Lc absent) using Extended Field Coding */
+#define T4T_CMD_MAX_EFC_NO_LC_HDR_SIZE 7
 #define T4T_VERSION_3_0 0x30 /* version 3.0 */
 #define T4T_VERSION_2_0 0x20 /* version 2.0 */
 #define T4T_VERSION_1_0 0x10 /* version 1.0 */
@@ -409,6 +411,8 @@ typedef uint8_t tT3T_POLL_RC;
 #define T4T_RSP_WRONG_LENGTH 0x6700
 #define T4T_RSP_INSTR_NOT_SUPPORTED 0x6D00
 #define T4T_RSP_CMD_NOT_ALLOWED 0x6986
+#define T4T_RSP_WARNING_PARAMS_CHECK(X) \
+  ((X == 0x63 || X == 0x62 || X == 0x61) ? true : false)
 
 /* V1.0 Type 4 Tag Applicaiton ID length */
 #define T4T_V10_NDEF_TAG_AID_LEN 0x07

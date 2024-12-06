@@ -36,6 +36,7 @@
 #include "nfa_ee_int.h"
 #endif
 
+#include "nfa_nfcee_int.h"
 #include "nfc_int.h"
 
 #if (NFA_SNEP_INCLUDED == TRUE)
@@ -49,6 +50,9 @@ using android::base::StringPrintf;
 #ifndef NFA_DM_DISABLE_TIMEOUT_VAL
 #define NFA_DM_DISABLE_TIMEOUT_VAL 1000
 #endif
+
+extern tNFA_TECHNOLOGY_MASK dm_disc_listen_mask_dfl;
+extern tNFA_TECHNOLOGY_MASK dm_disc_poll_mask_dfl;
 
 static void nfa_dm_set_init_nci_params(void);
 static tNFA_STATUS nfa_dm_start_polling(void);
@@ -259,7 +263,6 @@ static void nfa_dm_nfc_response_cback(tNFC_RESPONSE_EVT event,
   tNFA_DM_CBACK_DATA dm_cback_data;
   tNFA_CONN_EVT_DATA conn_evt;
   uint8_t dm_cback_evt;
-  uint8_t max_ee = 0;
 
   LOG(VERBOSE) << StringPrintf("%s(0x%x)", nfa_dm_nfc_revt_2_str(event).c_str(),
                              event);
@@ -269,14 +272,6 @@ static void nfa_dm_nfc_response_cback(tNFC_RESPONSE_EVT event,
 
       /* NFC stack enabled. Enable nfa sub-systems */
       if (p_data->enable.status == NFC_STATUS_OK) {
-        if (nfa_ee_max_ee_cfg != 0) {
-          if (nfa_dm_cb.get_max_ee) {
-            max_ee = nfa_dm_cb.get_max_ee();
-            if (max_ee) {
-              nfa_ee_max_ee_cfg = max_ee;
-            }
-          }
-        }
         /* Initialize NFA subsystems */
         nfa_sys_enable_subsystems();
       } else if (nfa_dm_cb.flags & NFA_DM_FLAGS_ENABLE_EVT_PEND) {
@@ -342,10 +337,6 @@ static void nfa_dm_nfc_response_cback(tNFC_RESPONSE_EVT event,
       break;
 
     case NFC_EE_DISCOVER_REQ_REVT: /* EE Discover Req notification */
-      if (nfa_dm_is_active() &&
-          (nfa_dm_cb.disc_cb.disc_state == NFA_DM_RFST_DISCOVERY)) {
-        nfa_dm_rf_deactivate(NFA_DEACTIVATE_TYPE_IDLE);
-      }
       nfa_ee_proc_evt(event, p_data);
       break;
 
@@ -491,6 +482,7 @@ bool nfa_dm_disable(tNFA_DM_MSG* p_data) {
     nfa_sys_start_timer(&nfa_dm_cb.tle, NFA_DM_TIMEOUT_DISABLE_EVT,
                         NFA_DM_DISABLE_TIMEOUT_VAL);
   }
+  nfa_t4tnfcee_deinit();
 
   /* Disable all subsystems other than DM (DM will be disabled after all  */
   /* the other subsystem have been disabled)                              */
@@ -899,20 +891,9 @@ tNFA_STATUS nfa_dm_start_polling(void) {
       poll_disc_mask |= NFA_DM_DISC_MASK_P_LEGACY;
       poll_disc_mask |= NFA_DM_DISC_MASK_PA_MIFARE;
     }
-    if (NFC_GetNCIVersion() >= NCI_VERSION_2_0) {
-      if (poll_tech_mask & NFA_TECHNOLOGY_MASK_ACTIVE) {
-        poll_disc_mask |= NFA_DM_DISC_MASK_PACM_NFC_DEP;
-      }
-    } else {
-      if (poll_tech_mask & NFA_TECHNOLOGY_MASK_A_ACTIVE) {
-        poll_disc_mask |= NFA_DM_DISC_MASK_PAA_NFC_DEP;
-      }
-      if (poll_tech_mask & NFA_TECHNOLOGY_MASK_F_ACTIVE) {
-        poll_disc_mask |= NFA_DM_DISC_MASK_PFA_NFC_DEP;
-      }
-    }
     if (poll_tech_mask & NFA_TECHNOLOGY_MASK_B) {
       poll_disc_mask |= NFA_DM_DISC_MASK_PB_ISO_DEP;
+      poll_disc_mask |= NFA_DM_DISC_MASK_PB_CI;
     }
     if (poll_tech_mask & NFA_TECHNOLOGY_MASK_F) {
       poll_disc_mask |= NFA_DM_DISC_MASK_PF_T3T;
@@ -926,14 +907,6 @@ tNFA_STATUS nfa_dm_start_polling(void) {
     }
     if (poll_tech_mask & NFA_TECHNOLOGY_MASK_KOVIO) {
       poll_disc_mask |= NFA_DM_DISC_MASK_P_KOVIO;
-    }
-
-    if (!(nfc_cb.nci_interfaces & (1 << NCI_INTERFACE_NFC_DEP))) {
-      /* Remove NFC-DEP related Discovery mask, if NFC_DEP interface is not
-       * supported */
-      poll_disc_mask &=
-          ~(NFA_DM_DISC_MASK_PACM_NFC_DEP | NFA_DM_DISC_MASK_PAA_NFC_DEP |
-            NFA_DM_DISC_MASK_PFA_NFC_DEP | NFA_DM_DISC_MASK_PF_NFC_DEP);
     }
 
     nfa_dm_cb.poll_disc_handle = nfa_dm_add_rf_discover(
@@ -1177,6 +1150,7 @@ bool nfa_dm_act_start_rf_discovery(__attribute__((unused))
 *******************************************************************************/
 bool nfa_dm_act_stop_rf_discovery(__attribute__((unused)) tNFA_DM_MSG* p_data) {
   tNFA_CONN_EVT_DATA evt_data;
+  tNFA_DM_DISC_FLAGS disc_flags = nfa_dm_cb.disc_cb.disc_flags;
 
   LOG(VERBOSE) << __func__;
 
@@ -1200,6 +1174,9 @@ bool nfa_dm_act_stop_rf_discovery(__attribute__((unused)) tNFA_DM_MSG* p_data) {
       if (nfa_dm_cb.disc_cb.kovio_tle.in_use)
         nfa_sys_stop_timer(&nfa_dm_cb.disc_cb.kovio_tle);
       nfa_rw_stop_presence_check_timer();
+    } else {
+      // Stop RF discovery failed, need to restore flags
+      nfa_dm_cb.disc_cb.disc_flags = disc_flags;
     }
   }
   return true;
@@ -1464,7 +1441,7 @@ static void nfa_dm_excl_disc_cback(tNFA_DM_RF_DISC_EVT event,
           (p_data->deactivate.type == NFC_DEACTIVATE_TYPE_SLEEP_AF)) {
         evt_data.deactivated.type = NFA_DEACTIVATE_TYPE_SLEEP;
       } else {
-        evt_data.deactivated.type = NFA_DEACTIVATE_TYPE_IDLE;
+        evt_data.deactivated.type = p_data->deactivate.type;
       }
 
       /* notify deactivation to upper layer */
@@ -1529,6 +1506,14 @@ static void nfa_dm_poll_disc_cback(tNFA_DM_RF_DISC_EVT event,
             (nfa_dm_cb.disc_cb.activated_protocol == NFC_PROTOCOL_MIFARE)) {
           /* Notify NFA tag sub-system */
           nfa_rw_proc_disc_evt(NFA_DM_RF_DISC_ACTIVATED_EVT, p_data, true);
+        }
+        // Special case for chinese ID card
+        else if ((nfa_dm_cb.disc_cb.activated_protocol ==
+                  NFC_PROTOCOL_UNKNOWN) &&
+                 (nfa_dm_cb.disc_cb.activated_rf_interface ==
+                  NFC_DISCOVERY_TYPE_POLL_B)) {
+          /* Notify NFA tag sub-system */
+          nfa_rw_proc_disc_evt(NFA_DM_RF_DISC_ACTIVATED_EVT, p_data, true);
         } else /* if NFC-DEP/ISO-DEP with frame interface */
         {
           /* Set data callback to receive raw frame */
@@ -1562,7 +1547,7 @@ static void nfa_dm_poll_disc_cback(tNFA_DM_RF_DISC_EVT event,
             (p_data->deactivate.type == NFC_DEACTIVATE_TYPE_SLEEP_AF)) {
           evt_data.deactivated.type = NFA_DEACTIVATE_TYPE_SLEEP;
         } else {
-          evt_data.deactivated.type = NFA_DEACTIVATE_TYPE_IDLE;
+          evt_data.deactivated.type = p_data->deactivate.type;
         }
         /* notify deactivation to application */
         nfa_dm_conn_cback_event_notify(NFA_DEACTIVATED_EVT, &evt_data);
@@ -1744,6 +1729,22 @@ bool nfa_dm_act_change_discovery_tech(tNFA_DM_MSG* p_data) {
   nfa_dm_cb.change_poll_mask = p_data->change_discovery_tech.change_poll_mask;
   nfa_dm_cb.change_listen_mask =
       p_data->change_discovery_tech.change_listen_mask;
+
+  if (nfa_dm_cb.flags & NFA_DM_FLAGS_DEFAULT_TECH_CHANGED) {
+    if (nfa_dm_cb.flags & NFA_DM_FLAGS_LISTEN_TECH_CHANGED) {
+      dm_disc_listen_mask_dfl = nfa_dm_cb.change_listen_mask;
+    } else if (nfa_dm_cb.change_listen_mask == 0xff) {
+      dm_disc_listen_mask_dfl = 0;
+    }
+    LOG(DEBUG) << StringPrintf("%s; dm_disc_listen_mask_dfl: 0x%x", __func__,
+                               dm_disc_listen_mask_dfl);
+    if (nfa_dm_cb.flags & NFA_DM_FLAGS_POLL_TECH_CHANGED) {
+      dm_disc_poll_mask_dfl = nfa_dm_cb.change_poll_mask;
+    } else if (nfa_dm_cb.change_poll_mask == 0xff) {
+      dm_disc_poll_mask_dfl = 0;
+    }
+  }
+
   evt_data.status = NFA_STATUS_OK;
   nfa_dm_conn_cback_event_notify(NFA_LISTEN_ENABLED_EVT, &evt_data);
 

@@ -96,6 +96,7 @@ uint8_t appl_dta_mode_flag = 0x00;
 bool isDownloadFirmwareCompleted = false;
 bool use_aidl = false;
 uint8_t mute_tech_route_option = 0x00;
+unsigned int t5t_mute_legacy = 0;
 
 extern tNFA_DM_CFG nfa_dm_cfg;
 extern tNFA_PROPRIETARY_CFG nfa_proprietary_cfg;
@@ -357,7 +358,8 @@ void NfcAdaptation::GetVendorConfigs(
         aidlConfigValue.nfaProprietaryCfg.protocolMifare,
         aidlConfigValue.nfaProprietaryCfg.discoveryPollKovio,
         aidlConfigValue.nfaProprietaryCfg.discoveryPollBPrime,
-        aidlConfigValue.nfaProprietaryCfg.discoveryListenBPrime};
+        aidlConfigValue.nfaProprietaryCfg.discoveryListenBPrime,
+        aidlConfigValue.nfaProprietaryCfg.protocolChineseId};
     configMap.emplace(NAME_NFA_PROPRIETARY_CFG, ConfigValue(nfaPropCfg));
     configMap.emplace(NAME_NFA_POLL_BAIL_OUT_MODE,
                       ConfigValue(aidlConfigValue.nfaPollBailOutMode ? 1 : 0));
@@ -391,7 +393,13 @@ void NfcAdaptation::GetVendorConfigs(
                       ConfigValue((uint8_t)aidlConfigValue.offHostSIMPipeId));
     configMap.emplace(NAME_OFF_HOST_ESE_PIPE_ID,
                       ConfigValue((uint8_t)aidlConfigValue.offHostESEPipeId));
+    configMap.emplace(NAME_T4T_NFCEE_ENABLE,
+                      ConfigValue(aidlConfigValue.t4tNfceeEnable ? 1 : 0));
 
+    if (aidlConfigValue.offHostSimPipeIds.size() != 0) {
+      configMap.emplace(NAME_OFF_HOST_SIM_PIPE_IDS,
+                        ConfigValue(aidlConfigValue.offHostSimPipeIds));
+    }
     configMap.emplace(NAME_ISO_DEP_MAX_TRANSCEIVE,
                       ConfigValue(aidlConfigValue.maxIsoDepTransceiveLength));
     if (aidlConfigValue.hostAllowlist.size() != 0) {
@@ -535,6 +543,8 @@ void NfcAdaptation::Initialize() {
       nfa_proprietary_cfg.pro_discovery_b_prime_poll = p_config[7];
     if (p_config.size() > 8)
       nfa_proprietary_cfg.pro_discovery_b_prime_listen = p_config[8];
+    if (p_config.size() > 9)
+      nfa_proprietary_cfg.pro_protocol_chinese_id = p_config[9];
   }
 
   // Configure allowlist of HCI host ID's
@@ -543,6 +553,19 @@ void NfcAdaptation::Initialize() {
     host_allowlist = NfcConfig::getBytes(NAME_DEVICE_HOST_ALLOW_LIST);
     nfa_hci_cfg.num_allowlist_host = host_allowlist.size();
     nfa_hci_cfg.p_allowlist = &host_allowlist[0];
+  }
+
+  if (NfcConfig::hasKey(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD)) {
+    t5t_mute_legacy =
+        NfcConfig::getUnsigned(NAME_ISO15693_SKIP_GET_SYS_INFO_CMD);
+  }
+
+  if (NfcConfig::hasKey(NAME_NFA_DM_LISTEN_ACTIVE_DEACT_NTF_TIMEOUT)) {
+    unsigned int value =
+        NfcConfig::getUnsigned(NAME_NFA_DM_LISTEN_ACTIVE_DEACT_NTF_TIMEOUT);
+    if (value > 0) {
+      nfa_dm_cfg.deact_ntf_listen_active_timeout = value * 1000;
+    }
   }
 
   verify_stack_non_volatile_store();

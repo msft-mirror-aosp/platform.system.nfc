@@ -32,6 +32,7 @@
 #include "nfa_dm_int.h"
 #include "nfa_ee_int.h"
 #include "nfa_hci_int.h"
+#include "nfa_nfcee_int.h"
 #include "nfc_int.h"
 
 using android::base::StringPrintf;
@@ -61,6 +62,9 @@ const uint8_t nfa_ee_tech_list[NFA_EE_NUM_TECH] = {
 #define NFA_EE_NUM_PROTO 5
 
 extern uint8_t mute_tech_route_option;
+
+#define NFCEE_TYPE_NDEF 0x04  // indicates that the NFCEE supports NDEF storage
+#define NFCEE_TAG_INDEX 0
 
 static void add_route_tech_proto_tlv(uint8_t** pp, uint8_t tlv_type,
                                      uint8_t nfcee_id, uint8_t pwr_cfg,
@@ -99,11 +103,10 @@ static void add_route_sys_code_tlv(uint8_t** p_buff, uint8_t* p_sys_code_cfg,
 
 const uint8_t nfa_ee_proto_mask_list[NFA_EE_NUM_PROTO] = {
     NFA_PROTOCOL_MASK_T1T, NFA_PROTOCOL_MASK_T2T, NFA_PROTOCOL_MASK_T3T,
-    NFA_PROTOCOL_MASK_ISO_DEP, NFA_PROTOCOL_MASK_NFC_DEP};
+    NFA_PROTOCOL_MASK_ISO_DEP};
 
 const uint8_t nfa_ee_proto_list[NFA_EE_NUM_PROTO] = {
-    NFC_PROTOCOL_T1T, NFC_PROTOCOL_T2T, NFC_PROTOCOL_T3T, NFC_PROTOCOL_ISO_DEP,
-    NFC_PROTOCOL_NFC_DEP};
+    NFC_PROTOCOL_T1T, NFC_PROTOCOL_T2T, NFC_PROTOCOL_T3T, NFC_PROTOCOL_ISO_DEP};
 
 static void nfa_ee_report_discover_req_evt(void);
 static void nfa_ee_build_discover_req_evt(tNFA_EE_DISCOVER_REQ* p_evt_data);
@@ -198,10 +201,7 @@ static void nfa_ee_update_route_size(tNFA_EE_ECB* p_cb) {
         power_cfg |= NCI_ROUTE_PWR_STATE_SCREEN_OFF_LOCK();
     }
 
-    // NFC-DEP must route to HOST
-    if (power_cfg ||
-        (p_cb->nfcee_id == NFC_DH_ID &&
-         nfa_ee_proto_mask_list[xx] == NFA_PROTOCOL_MASK_NFC_DEP)) {
+    if (power_cfg) {
       /* 5 = 1 (tag) + 1 (len) + 1(nfcee_id) + 1(power cfg) + 1 (protocol) */
       p_cb->size_mask_proto += 5;
     }
@@ -353,8 +353,12 @@ static void nfa_ee_add_tech_route_to_ecb(tNFA_EE_ECB* p_cb, uint8_t* pp,
               &pp, nfa_ee_cb.route_block_control | NFC_ROUTE_TAG_TECH,
               0x00 /* DH */, 0x00 /* no power states */, nfa_ee_tech_list[xx]);
         } else {
-          add_route_tech_proto_tlv(&pp, NFC_ROUTE_TAG_TECH, p_cb->nfcee_id,
-                                   power_cfg, nfa_ee_tech_list[xx]);
+          add_route_tech_proto_tlv(
+              &pp,
+              nfa_dm_get_nfc_secure()
+                  ? nfa_ee_cb.route_block_control | NFC_ROUTE_TAG_TECH
+                  : NFC_ROUTE_TAG_TECH,
+              p_cb->nfcee_id, power_cfg, nfa_ee_tech_list[xx]);
         }
       }
       num_tlv++;
@@ -383,9 +387,7 @@ static void nfa_ee_add_proto_route_to_ecb(tNFA_EE_ECB* p_cb, uint8_t* pp,
       power_cfg |= NCI_ROUTE_PWR_STATE_SWITCH_OFF;
     if (p_cb->proto_battery_off & nfa_ee_proto_mask_list[xx])
       power_cfg |= NCI_ROUTE_PWR_STATE_BATT_OFF;
-    if (power_cfg ||
-        (p_cb->nfcee_id == NFC_DH_ID &&
-         nfa_ee_proto_mask_list[xx] == NFA_PROTOCOL_MASK_NFC_DEP)) {
+    if (power_cfg) {
       /* Applying Route Block for ISO DEP Protocol, so that AIDs
        * which are not in the routing table can also be blocked */
       if (nfa_ee_proto_mask_list[xx] == NFA_PROTOCOL_MASK_ISO_DEP) {
@@ -405,21 +407,8 @@ static void nfa_ee_add_proto_route_to_ecb(tNFA_EE_ECB* p_cb, uint8_t* pp,
       } else {
         proto_tag = NFC_ROUTE_TAG_PROTO;
       }
-      if (p_cb->nfcee_id == NFC_DH_ID &&
-          nfa_ee_proto_mask_list[xx] == NFA_PROTOCOL_MASK_NFC_DEP) {
-        /* add NFC-DEP routing to HOST if NFC_DEP interface is supported */
-        if (nfc_cb.nci_interfaces & (1 << NCI_INTERFACE_NFC_DEP)) {
-          add_route_tech_proto_tlv(&pp, NFC_ROUTE_TAG_PROTO, NFC_DH_ID,
-                                   NCI_ROUTE_PWR_STATE_ON,
-                                   NFC_PROTOCOL_NFC_DEP);
-          LOG(VERBOSE) << StringPrintf("%s - NFC DEP added for DH!!!", __func__);
-        } else {
-          continue;
-        }
-      } else {
-        add_route_tech_proto_tlv(&pp, proto_tag, p_cb->nfcee_id, power_cfg,
-                                 nfa_ee_proto_list[xx]);
-      }
+      add_route_tech_proto_tlv(&pp, proto_tag, p_cb->nfcee_id, power_cfg,
+                               nfa_ee_proto_list[xx]);
       num_tlv++;
       if (power_cfg != NCI_ROUTE_PWR_STATE_ON)
         nfa_ee_cb.ee_cfged |= NFA_EE_CFGED_OFF_ROUTING;
@@ -546,6 +535,12 @@ static void nfa_ee_add_sys_code_route_to_ecb(tNFA_EE_ECB* p_cb, uint8_t* pp,
       uint8_t* p_start = pp;
       /* add one SC entry */
       if (p_cb->sys_code_rt_loc_vs_info[xx] & NFA_EE_AE_ROUTE) {
+        if (start_offset >
+            (sizeof(p_cb->sys_code_cfg) - NFA_EE_SYSTEM_CODE_LEN)) {
+          LOG(ERROR) << StringPrintf("%s; start_offset higher than 2",
+                                     __func__);
+          return;
+        }
         uint8_t* p_sys_code_cfg = &p_cb->sys_code_cfg[start_offset];
         if (nfa_ee_is_active(p_cb->sys_code_rt_loc[xx] | NFA_HANDLE_GROUP_EE)) {
           if (mute_tech_route_option) {
@@ -777,6 +772,12 @@ tNFA_EE_ECB* nfa_ee_find_sys_code_offset(uint16_t sys_code, int* p_offset,
     if (p_ecb->sys_code_cfg_entries) {
       uint8_t offset = 0;
       for (uint8_t yy = 0; yy < p_ecb->sys_code_cfg_entries; yy++) {
+        if (offset >=
+            (NFA_EE_MAX_SYSTEM_CODE_ENTRIES * NFA_EE_SYSTEM_CODE_LEN)) {
+          LOG(ERROR) << StringPrintf("%s; offset higher than max allowed value",
+                                     __func__);
+          return nullptr;
+        }
         if ((memcmp(&p_ecb->sys_code_cfg[offset], &sys_code,
                     NFA_EE_SYSTEM_CODE_LEN) == 0)) {
           p_ret = p_ecb;
@@ -2039,6 +2040,14 @@ void nfa_ee_nci_disc_ntf(tNFA_EE_MSG* p_data) {
       }
     }
 
+    if (p_cb->ee_tlv[NFCEE_TAG_INDEX].tag == NFCEE_TYPE_NDEF) {
+      nfa_t4tnfcee_set_ee_cback(p_cb);
+      p_info = &evt_data.new_ee;
+      p_info->ee_handle = (tNFA_HANDLE)p_cb->nfcee_id;
+      p_info->ee_status = p_cb->ee_status;
+      nfa_ee_report_event(p_cb->p_ee_cback, NFA_EE_DISCOVER_EVT, &evt_data);
+    }
+
     if ((nfa_ee_cb.p_ee_disc_cback == nullptr) && (notify_new_ee == true)) {
       if (nfa_dm_is_active() && (p_cb->ee_status != NFA_EE_STATUS_REMOVED)) {
         /* report this NFA_EE_NEW_EE_EVT only after NFA_DM_ENABLE_EVT is
@@ -2518,6 +2527,11 @@ void nfa_ee_nci_disc_req_ntf(tNFA_EE_MSG* p_data) {
       } else if (p_cbk->info[xx].tech_n_mode ==
                  NFC_DISCOVERY_TYPE_LISTEN_B_PRIME) {
         p_cb->lbp_protocol = p_cbk->info[xx].protocol;
+      }
+      if (p_cb->ee_tlv[NFCEE_TAG_INDEX].tag == NFCEE_TYPE_NDEF) {
+        tNFA_EE_CBACK_DATA nfa_ee_cback_data = {0};
+        nfa_ee_report_event(p_cb->p_ee_cback, NFA_EE_DISCOVER_REQ_EVT,
+                            &nfa_ee_cback_data);
       }
       LOG(VERBOSE) << StringPrintf(
           "nfcee_id=0x%x ee_status=0x%x ecb_flags=0x%x la_protocol=0x%x "
