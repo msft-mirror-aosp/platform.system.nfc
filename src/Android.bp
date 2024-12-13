@@ -92,6 +92,14 @@ cc_library {
         "com.android.nfcservices",
     ],
     min_sdk_version: "35", // Make it 36 once available.
+    visibility: [
+        "//cts:__subpackages__",
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
+        "//test/sts:__subpackages__",
+    ],
 }
 
 cc_defaults {
@@ -134,7 +142,7 @@ cc_defaults {
     fuzz_config: {
         cc: [
             "android-security-assurance-redteam@google.com",
-            "zachoverflow@google.com",
+            "rpius@google.com",
             "jackcwyu@google.com",
             "georgekgchang@google.com",
             "alisher@google.com",
@@ -166,6 +174,12 @@ cc_library {
         "com.android.nfcservices",
     ],
     min_sdk_version: "35", // Make it 36 once available.
+    visibility: [
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
+    ],
 }
 
 genrule {
