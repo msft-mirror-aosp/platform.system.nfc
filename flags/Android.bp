@@ -15,4 +15,10 @@ cc_aconfig_library {
         "//apex_available:platform",
         "com.android.nfcservices",
     ],
+    visibility: [
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
+    ],
 }

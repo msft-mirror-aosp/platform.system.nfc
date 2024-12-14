@@ -21,6 +21,10 @@ genrule {
     defaults: ["pdl_rust_legacy_generator_defaults"],
     srcs: ["src/nci_packets.pdl"],
     out: ["nci_packets.rs"],
+    visibility: [
+        ":__subpackages__",
+        "//device/google/cuttlefish:__subpackages__",
+    ],
 }
 
 genrule {
@@ -28,6 +32,10 @@ genrule {
     defaults: ["pdl_rust_legacy_generator_defaults"],
     srcs: ["src/rf_packets.pdl"],
     out: ["rf_packets.rs"],
+    visibility: [
+        ":__subpackages__",
+        "//device/google/cuttlefish:__subpackages__",
+    ],
 }
 
 rust_binary_host {
@@ -50,6 +58,7 @@ rust_binary_host {
         "librustutils",
         "libtokio",
     ],
+    visibility: ["//device/google/cuttlefish:__subpackages__"],
 }
 
 genrule {
@@ -78,4 +87,5 @@ cc_library_headers {
     export_generated_headers: ["casimir_rf_packets_cxx_gen"],
     export_header_lib_headers: ["pdl_cxx_packet_runtime"],
     host_supported: true,
+    visibility: ["//device/google/cuttlefish:__subpackages__"],
 }

@@ -50,6 +50,12 @@ cc_library_static {
         "com.android.nfcservices",
     ],
     min_sdk_version: "35", // Make it 36 once available.
+    visibility: [
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
+    ],
 }
 
 cc_fuzz {
