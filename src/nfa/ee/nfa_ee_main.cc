@@ -50,37 +50,38 @@ static const tNFA_SYS_REG nfa_ee_sys_reg = {nfa_ee_sys_enable, nfa_ee_evt_hdlr,
 
 const tNFA_EE_SM_ACT nfa_ee_actions[] = {
     /* NFA-EE action function/ internal events */
-    nfa_ee_api_discover,          /* NFA_EE_API_DISCOVER_EVT      */
-    nfa_ee_api_register,          /* NFA_EE_API_REGISTER_EVT      */
-    nfa_ee_api_deregister,        /* NFA_EE_API_DEREGISTER_EVT    */
-    nfa_ee_api_mode_set,          /* NFA_EE_API_MODE_SET_EVT      */
-    nfa_ee_api_set_tech_cfg,      /* NFA_EE_API_SET_TECH_CFG_EVT  */
-    nfa_ee_api_clear_tech_cfg,    /*NFA_EE_API_CLEAR_TECH_CFG_EVT */
-    nfa_ee_api_set_proto_cfg,     /* NFA_EE_API_SET_PROTO_CFG_EVT */
-    nfa_ee_api_clear_proto_cfg,   /*NFA_EE_API_CLEAR_PROTO_CFG_EVT*/
-    nfa_ee_api_add_aid,           /* NFA_EE_API_ADD_AID_EVT       */
-    nfa_ee_api_remove_aid,        /* NFA_EE_API_REMOVE_AID_EVT    */
-    nfa_ee_api_add_sys_code,      /* NFA_EE_API_ADD_SYSCODE_EVT   */
-    nfa_ee_api_remove_sys_code,   /* NFA_EE_API_REMOVE_SYSCODE_EVT*/
-    nfa_ee_api_lmrt_size,         /* NFA_EE_API_LMRT_SIZE_EVT     */
-    nfa_ee_api_update_now,        /* NFA_EE_API_UPDATE_NOW_EVT    */
-    nfa_ee_api_connect,           /* NFA_EE_API_CONNECT_EVT       */
-    nfa_ee_api_send_data,         /* NFA_EE_API_SEND_DATA_EVT     */
-    nfa_ee_api_disconnect,        /* NFA_EE_API_DISCONNECT_EVT    */
-    nfa_ee_api_pwr_and_link_ctrl, /* NFA_EE_API_PWR_AND_LINK_CTRL_EVT */
-    nfa_ee_nci_disc_rsp,          /* NFA_EE_NCI_DISC_RSP_EVT      */
-    nfa_ee_nci_disc_ntf,          /* NFA_EE_NCI_DISC_NTF_EVT      */
-    nfa_ee_nci_mode_set_rsp,      /* NFA_EE_NCI_MODE_SET_RSP_EVT  */
-    nfa_ee_nci_conn,              /* NFA_EE_NCI_CONN_EVT          */
-    nfa_ee_nci_conn,              /* NFA_EE_NCI_DATA_EVT          */
-    nfa_ee_nci_action_ntf,        /* NFA_EE_NCI_ACTION_NTF_EVT    */
-    nfa_ee_nci_disc_req_ntf,      /* NFA_EE_NCI_DISC_REQ_NTF_EVT  */
-    nfa_ee_nci_wait_rsp,          /* NFA_EE_NCI_WAIT_RSP_EVT      */
-    nfa_ee_rout_timeout,          /* NFA_EE_ROUT_TIMEOUT_EVT      */
-    nfa_ee_discv_timeout,         /* NFA_EE_DISCV_TIMEOUT_EVT     */
-    nfa_ee_lmrt_to_nfcc,          /* NFA_EE_CFG_TO_NFCC_EVT       */
-    nfa_ee_nci_nfcee_status_ntf,  /*NFA_EE_NCI_NFCEE_STATUS_NTF_EVT*/
-    nfa_ee_pwr_and_link_ctrl_rsp  /* NFA_EE_PWR_CONTROL_EVT */
+    nfa_ee_api_discover,            /* NFA_EE_API_DISCOVER_EVT      */
+    nfa_ee_api_register,            /* NFA_EE_API_REGISTER_EVT      */
+    nfa_ee_api_deregister,          /* NFA_EE_API_DEREGISTER_EVT    */
+    nfa_ee_api_mode_set,            /* NFA_EE_API_MODE_SET_EVT      */
+    nfa_ee_api_set_tech_cfg,        /* NFA_EE_API_SET_TECH_CFG_EVT  */
+    nfa_ee_api_clear_tech_cfg,      /*NFA_EE_API_CLEAR_TECH_CFG_EVT */
+    nfa_ee_api_set_proto_cfg,       /* NFA_EE_API_SET_PROTO_CFG_EVT */
+    nfa_ee_api_clear_proto_cfg,     /*NFA_EE_API_CLEAR_PROTO_CFG_EVT*/
+    nfa_ee_api_add_aid,             /* NFA_EE_API_ADD_AID_EVT       */
+    nfa_ee_api_remove_aid,          /* NFA_EE_API_REMOVE_AID_EVT    */
+    nfa_ee_api_add_sys_code,        /* NFA_EE_API_ADD_SYSCODE_EVT   */
+    nfa_ee_api_remove_sys_code,     /* NFA_EE_API_REMOVE_SYSCODE_EVT*/
+    nfa_ee_api_lmrt_size,           /* NFA_EE_API_LMRT_SIZE_EVT     */
+    nfa_ee_api_update_now,          /* NFA_EE_API_UPDATE_NOW_EVT    */
+    nfa_ee_api_connect,             /* NFA_EE_API_CONNECT_EVT       */
+    nfa_ee_api_send_data,           /* NFA_EE_API_SEND_DATA_EVT     */
+    nfa_ee_api_disconnect,          /* NFA_EE_API_DISCONNECT_EVT    */
+    nfa_ee_api_clear_routing_table, /* NFA_EE_API_CLEAR_ROUTING_TABLE_EVT */
+    nfa_ee_api_pwr_and_link_ctrl,   /* NFA_EE_API_PWR_AND_LINK_CTRL_EVT */
+    nfa_ee_nci_disc_rsp,            /* NFA_EE_NCI_DISC_RSP_EVT      */
+    nfa_ee_nci_disc_ntf,            /* NFA_EE_NCI_DISC_NTF_EVT      */
+    nfa_ee_nci_mode_set_rsp,        /* NFA_EE_NCI_MODE_SET_RSP_EVT  */
+    nfa_ee_nci_conn,                /* NFA_EE_NCI_CONN_EVT          */
+    nfa_ee_nci_conn,                /* NFA_EE_NCI_DATA_EVT          */
+    nfa_ee_nci_action_ntf,          /* NFA_EE_NCI_ACTION_NTF_EVT    */
+    nfa_ee_nci_disc_req_ntf,        /* NFA_EE_NCI_DISC_REQ_NTF_EVT  */
+    nfa_ee_nci_wait_rsp,            /* NFA_EE_NCI_WAIT_RSP_EVT      */
+    nfa_ee_rout_timeout,            /* NFA_EE_ROUT_TIMEOUT_EVT      */
+    nfa_ee_discv_timeout,           /* NFA_EE_DISCV_TIMEOUT_EVT     */
+    nfa_ee_lmrt_to_nfcc,            /* NFA_EE_CFG_TO_NFCC_EVT       */
+    nfa_ee_nci_nfcee_status_ntf,    /*NFA_EE_NCI_NFCEE_STATUS_NTF_EVT*/
+    nfa_ee_pwr_and_link_ctrl_rsp    /* NFA_EE_PWR_CONTROL_EVT */
 };
 
 /*******************************************************************************
@@ -132,6 +133,35 @@ void nfa_ee_sys_enable(void) {
       nfa_ee_cb.route_block_control = NCI_ROUTE_QUAL_BLOCK_ROUTE;
       LOG(VERBOSE) << StringPrintf("nfa_ee_cb.route_block_control=0x%x",
                                  nfa_ee_cb.route_block_control);
+    }
+  }
+
+  int xx;
+  int max_aid_cfg_length = nfa_ee_find_max_aid_cfg_len();
+  int max_aid_entries = max_aid_cfg_length / NFA_MIN_AID_LEN + 1;
+
+  LOG(DEBUG) << StringPrintf(
+      "%s; max_aid_cfg_length: %d and max_aid_entries: %d", __func__,
+      max_aid_cfg_length, max_aid_entries);
+
+  for (xx = 0; xx < NFA_EE_NUM_ECBS; xx++) {
+    nfa_ee_cb.ecb[xx].aid_len = (uint8_t*)GKI_getbuf(max_aid_entries);
+    nfa_ee_cb.ecb[xx].aid_pwr_cfg = (uint8_t*)GKI_getbuf(max_aid_entries);
+    nfa_ee_cb.ecb[xx].aid_rt_info = (uint8_t*)GKI_getbuf(max_aid_entries);
+    nfa_ee_cb.ecb[xx].aid_info = (uint8_t*)GKI_getbuf(max_aid_entries);
+    nfa_ee_cb.ecb[xx].aid_cfg = (uint8_t*)GKI_getbuf(max_aid_cfg_length);
+    if ((NULL != nfa_ee_cb.ecb[xx].aid_len) &&
+        (NULL != nfa_ee_cb.ecb[xx].aid_pwr_cfg) &&
+        (NULL != nfa_ee_cb.ecb[xx].aid_info) &&
+        (NULL != nfa_ee_cb.ecb[xx].aid_cfg)) {
+      memset(nfa_ee_cb.ecb[xx].aid_len, 0, max_aid_entries);
+      memset(nfa_ee_cb.ecb[xx].aid_pwr_cfg, 0, max_aid_entries);
+      memset(nfa_ee_cb.ecb[xx].aid_rt_info, 0, max_aid_entries);
+      memset(nfa_ee_cb.ecb[xx].aid_info, 0, max_aid_entries);
+      memset(nfa_ee_cb.ecb[xx].aid_cfg, 0, max_aid_cfg_length);
+    } else {
+      LOG(ERROR) << StringPrintf("%s; GKI_getbuf allocation for ECB failed !",
+                                 __func__);
     }
   }
 
@@ -469,6 +499,13 @@ void nfa_ee_sys_disable(void) {
       msg.deregister.index = xx;
       nfa_ee_api_deregister(&msg);
     }
+  }
+  for (xx = 0; xx < NFA_EE_NUM_ECBS; xx++) {
+    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_len);
+    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_pwr_cfg);
+    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_rt_info);
+    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_info);
+    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_cfg);
   }
 
   nfa_ee_cb.num_ee_expecting = 0;

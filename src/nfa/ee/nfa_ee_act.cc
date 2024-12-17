@@ -108,6 +108,8 @@ const uint8_t nfa_ee_proto_mask_list[NFA_EE_NUM_PROTO] = {
 const uint8_t nfa_ee_proto_list[NFA_EE_NUM_PROTO] = {
     NFC_PROTOCOL_T1T, NFC_PROTOCOL_T2T, NFC_PROTOCOL_T3T, NFC_PROTOCOL_ISO_DEP};
 
+const uint8_t NFA_REMOVE_ALL_AID[] = {0xFF, 0xFF, 0xFF, 0xFF,
+                                      0xFF, 0xFF, 0xFF, 0xFF};
 static void nfa_ee_report_discover_req_evt(void);
 static void nfa_ee_build_discover_req_evt(tNFA_EE_DISCOVER_REQ* p_evt_data);
 void nfa_ee_check_set_routing(uint16_t new_size, int* p_max_len, uint8_t* p,
@@ -900,32 +902,6 @@ void nfa_ee_api_register(tNFA_EE_MSG* p_data) {
     }
   }
 
-  int max_aid_cfg_length = nfa_ee_find_max_aid_cfg_len();
-  int max_aid_entries = max_aid_cfg_length / NFA_MIN_AID_LEN + 1;
-
-  LOG(VERBOSE) << StringPrintf("max_aid_cfg_length: %d and max_aid_entries: %d",
-                             max_aid_cfg_length, max_aid_entries);
-
-  for (xx = 0; xx < NFA_EE_NUM_ECBS; xx++) {
-    nfa_ee_cb.ecb[xx].aid_len = (uint8_t*)GKI_getbuf(max_aid_entries);
-    nfa_ee_cb.ecb[xx].aid_pwr_cfg = (uint8_t*)GKI_getbuf(max_aid_entries);
-    nfa_ee_cb.ecb[xx].aid_rt_info = (uint8_t*)GKI_getbuf(max_aid_entries);
-    nfa_ee_cb.ecb[xx].aid_info = (uint8_t*)GKI_getbuf(max_aid_entries);
-    nfa_ee_cb.ecb[xx].aid_cfg = (uint8_t*)GKI_getbuf(max_aid_cfg_length);
-    if ((NULL != nfa_ee_cb.ecb[xx].aid_len) &&
-        (NULL != nfa_ee_cb.ecb[xx].aid_pwr_cfg) &&
-        (NULL != nfa_ee_cb.ecb[xx].aid_info) &&
-        (NULL != nfa_ee_cb.ecb[xx].aid_cfg)) {
-      memset(nfa_ee_cb.ecb[xx].aid_len, 0, max_aid_entries);
-      memset(nfa_ee_cb.ecb[xx].aid_pwr_cfg, 0, max_aid_entries);
-      memset(nfa_ee_cb.ecb[xx].aid_rt_info, 0, max_aid_entries);
-      memset(nfa_ee_cb.ecb[xx].aid_info, 0, max_aid_entries);
-      memset(nfa_ee_cb.ecb[xx].aid_cfg, 0, max_aid_cfg_length);
-    } else {
-      LOG(ERROR) << StringPrintf("GKI_getbuf allocation for ECB failed !");
-    }
-  }
-
   /* This callback is verified (not NULL) in NFA_EeRegister() */
   (*p_cback)(NFA_EE_REGISTER_EVT, &evt_data);
 
@@ -949,14 +925,6 @@ void nfa_ee_api_deregister(tNFA_EE_MSG* p_data) {
   tNFA_EE_CBACK_DATA evt_data = {0};
 
   LOG(VERBOSE) << StringPrintf("nfa_ee_api_deregister");
-
-  for (int xx = 0; xx < NFA_EE_NUM_ECBS; xx++) {
-    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_len);
-    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_pwr_cfg);
-    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_rt_info);
-    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_info);
-    GKI_freebuf(nfa_ee_cb.ecb[xx].aid_cfg);
-  }
 
   p_cback = nfa_ee_cb.p_ee_cback[index];
   nfa_ee_cb.p_ee_cback[index] = nullptr;
@@ -1323,6 +1291,18 @@ void nfa_ee_api_add_aid(tNFA_EE_MSG* p_data) {
     /* mark AID changed */
     p_cb->ecb_flags |= NFA_EE_ECB_FLAGS_AID;
     nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_cb);
+    // Case default AID is on DH: one ecb for DH and one ecb for default AID
+    // If default AID is DH then mask 0x10 (idx 4 is DH entry in ecb) is not set
+    // If no other type of routing done on DH, then default AID route is not
+    // taken into account
+    for (int i = 0; i < NFA_EE_NUM_ECBS; i++) {
+      if (nfa_ee_cb.ecb[i].nfcee_id == p_cb->nfcee_id) {
+        nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(&nfa_ee_cb.ecb[i]);
+        /* mark AID changed */
+        nfa_ee_cb.ecb[i].ecb_flags |= NFA_EE_ECB_FLAGS_AID;
+        break;
+      }
+    }
     nfa_ee_update_route_aid_size(p_cb);
     nfa_ee_start_timer();
   }
@@ -1392,6 +1372,40 @@ void nfa_ee_api_remove_aid(tNFA_EE_MSG* p_data) {
     nfa_ee_start_timer();
     /* report NFA_EE_REMOVE_AID_EVT to the callback associated the NFCEE */
     p_cback = p_cb->p_ee_cback;
+  } else if ((p_data->rm_aid.aid_len == sizeof(NFA_REMOVE_ALL_AID)) &&
+             (0 == memcmp(NFA_REMOVE_ALL_AID, p_data->rm_aid.p_aid,
+                          p_data->rm_aid.aid_len))) {
+    int max_aid_cfg_length = nfa_ee_find_max_aid_cfg_len();
+    int max_aid_entries = max_aid_cfg_length / NFA_MIN_AID_LEN + 1;
+
+    /*Clear All AIDs*/
+    uint32_t xx;
+    tNFA_EE_ECB* p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      if (p_cb->aid_entries) {
+        memset(&p_cb->aid_cfg[0], 0x00, sizeof(p_cb->aid_cfg));
+        memset(&p_cb->aid_len[0], 0x00, max_aid_entries);
+        memset(&p_cb->aid_pwr_cfg[0], 0x00, max_aid_entries);
+        memset(&p_cb->aid_rt_info[0], 0x00, max_aid_entries);
+        p_cb->aid_entries = 0;
+
+        p_cb->size_aid = 0;
+
+        nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_cb);
+      }
+    }
+
+    // Clear content of NFA_EE_CB_4_DH entry
+    tNFA_EE_ECB* p_ecb = &nfa_ee_cb.ecb[NFA_EE_CB_4_DH];
+    memset(&p_ecb->aid_cfg[0], 0x00, sizeof(p_ecb->aid_cfg));
+    memset(&p_ecb->aid_len[0], 0x00, max_aid_entries);
+    memset(&p_ecb->aid_pwr_cfg[0], 0x00, max_aid_entries);
+    memset(&p_ecb->aid_rt_info[0], 0x00, max_aid_entries);
+    p_ecb->aid_entries = 0;
+    p_ecb->size_aid = 0;
+
+    p_cb->ecb_flags |= NFA_EE_ECB_FLAGS_AID;
+    nfa_ee_cb.ee_cfged |= nfa_ee_ecb_to_mask(p_ecb);
   } else {
     LOG(WARNING) << StringPrintf(
         "nfa_ee_api_remove_aid The AID entry is not in the database");
@@ -1719,6 +1733,98 @@ void nfa_ee_api_disconnect(tNFA_EE_MSG* p_data) {
   }
   evt_data.handle = (tNFA_HANDLE)p_cb->nfcee_id | NFA_HANDLE_GROUP_EE;
   nfa_ee_report_event(p_cb->p_ee_cback, NFA_EE_DISCONNECT_EVT, &evt_data);
+}
+
+/*******************************************************************************
+**
+** Function         nfa_ee_api_clear_routing_table
+**
+** Description      As the name indicates
+**
+** Returns          void
+**
+*******************************************************************************/
+void nfa_ee_api_clear_routing_table(tNFA_EE_MSG* p_data) {
+  LOG(DEBUG) << StringPrintf("%s", __func__);
+
+  uint32_t xx;
+  tNFA_EE_ECB* p_cb = nfa_ee_cb.ecb;
+
+  tNFA_EE_ECB* p_ecb = &nfa_ee_cb.ecb[NFA_EE_CB_4_DH];
+
+  /******************************************/
+  /************* Clear All proto *************/
+  /******************************************/
+  if (p_data->clear_routing_table.clear_proto == true) {
+    p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      p_cb->size_mask_proto = 0;
+      p_cb->proto_battery_off = 0;
+      p_cb->proto_screen_lock = 0;
+      p_cb->proto_screen_off = 0;
+      p_cb->proto_screen_off_lock = 0;
+      p_cb->proto_switch_off = 0;
+      p_cb->proto_switch_on = 0;
+    }
+
+    p_ecb->size_mask_proto = 0;
+    p_ecb->proto_battery_off = 0;
+    p_ecb->proto_screen_lock = 0;
+    p_ecb->proto_screen_off = 0;
+    p_ecb->proto_screen_off_lock = 0;
+    p_ecb->proto_switch_off = 0;
+    p_ecb->proto_switch_on = 0;
+  }
+
+  /******************************************/
+  /************* Clear All tech *************/
+  /******************************************/
+  if (p_data->clear_routing_table.clear_tech == true) {
+    p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      p_cb->size_mask_tech = 0;
+      p_cb->tech_battery_off = 0;
+      p_cb->tech_screen_lock = 0;
+      p_cb->tech_screen_off = 0;
+      p_cb->tech_screen_off_lock = 0;
+      p_cb->tech_switch_off = 0;
+      p_cb->tech_switch_on = 0;
+    }
+
+    p_ecb->size_mask_tech = 0;
+    p_ecb->tech_battery_off = 0;
+    p_ecb->tech_screen_lock = 0;
+    p_ecb->tech_screen_off = 0;
+    p_ecb->tech_screen_off_lock = 0;
+    p_ecb->tech_switch_off = 0;
+    p_ecb->tech_switch_on = 0;
+  }
+
+  /******************************************/
+  /************* Clear All SC *************/
+  /******************************************/
+  if (p_data->clear_routing_table.clear_sc == true) {
+    p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      memset(&p_cb->sys_code_cfg[0], 0x00, sizeof(p_cb->sys_code_cfg));
+      memset(&p_cb->sys_code_pwr_cfg[0], 0x00, sizeof(p_cb->sys_code_pwr_cfg));
+      memset(&p_cb->sys_code_rt_loc_vs_info[0], 0x00,
+             sizeof(p_cb->sys_code_rt_loc_vs_info));
+      memset(&p_cb->sys_code_rt_loc[0], 0x00, sizeof(p_cb->sys_code_rt_loc));
+
+      p_cb->sys_code_cfg_entries = 0;
+      p_cb->size_sys_code = 0;
+    }
+
+    memset(&p_ecb->sys_code_cfg[0], 0x00, sizeof(p_ecb->sys_code_cfg));
+    memset(&p_ecb->sys_code_pwr_cfg[0], 0x00, sizeof(p_ecb->sys_code_pwr_cfg));
+    memset(&p_ecb->sys_code_rt_loc_vs_info[0], 0x00,
+           sizeof(p_ecb->sys_code_rt_loc_vs_info));
+    memset(&p_ecb->sys_code_rt_loc[0], 0x00, sizeof(p_ecb->sys_code_rt_loc));
+
+    p_ecb->sys_code_cfg_entries = 0;
+    p_ecb->size_sys_code = 0;
+  }
 }
 
 /*******************************************************************************
