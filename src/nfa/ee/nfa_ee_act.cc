@@ -1737,6 +1737,98 @@ void nfa_ee_api_disconnect(tNFA_EE_MSG* p_data) {
 
 /*******************************************************************************
 **
+** Function         nfa_ee_api_clear_routing_table
+**
+** Description      As the name indicates
+**
+** Returns          void
+**
+*******************************************************************************/
+void nfa_ee_api_clear_routing_table(tNFA_EE_MSG* p_data) {
+  LOG(DEBUG) << StringPrintf("%s", __func__);
+
+  uint32_t xx;
+  tNFA_EE_ECB* p_cb = nfa_ee_cb.ecb;
+
+  tNFA_EE_ECB* p_ecb = &nfa_ee_cb.ecb[NFA_EE_CB_4_DH];
+
+  /******************************************/
+  /************* Clear All proto *************/
+  /******************************************/
+  if (p_data->clear_routing_table.clear_proto == true) {
+    p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      p_cb->size_mask_proto = 0;
+      p_cb->proto_battery_off = 0;
+      p_cb->proto_screen_lock = 0;
+      p_cb->proto_screen_off = 0;
+      p_cb->proto_screen_off_lock = 0;
+      p_cb->proto_switch_off = 0;
+      p_cb->proto_switch_on = 0;
+    }
+
+    p_ecb->size_mask_proto = 0;
+    p_ecb->proto_battery_off = 0;
+    p_ecb->proto_screen_lock = 0;
+    p_ecb->proto_screen_off = 0;
+    p_ecb->proto_screen_off_lock = 0;
+    p_ecb->proto_switch_off = 0;
+    p_ecb->proto_switch_on = 0;
+  }
+
+  /******************************************/
+  /************* Clear All tech *************/
+  /******************************************/
+  if (p_data->clear_routing_table.clear_tech == true) {
+    p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      p_cb->size_mask_tech = 0;
+      p_cb->tech_battery_off = 0;
+      p_cb->tech_screen_lock = 0;
+      p_cb->tech_screen_off = 0;
+      p_cb->tech_screen_off_lock = 0;
+      p_cb->tech_switch_off = 0;
+      p_cb->tech_switch_on = 0;
+    }
+
+    p_ecb->size_mask_tech = 0;
+    p_ecb->tech_battery_off = 0;
+    p_ecb->tech_screen_lock = 0;
+    p_ecb->tech_screen_off = 0;
+    p_ecb->tech_screen_off_lock = 0;
+    p_ecb->tech_switch_off = 0;
+    p_ecb->tech_switch_on = 0;
+  }
+
+  /******************************************/
+  /************* Clear All SC *************/
+  /******************************************/
+  if (p_data->clear_routing_table.clear_sc == true) {
+    p_cb = nfa_ee_cb.ecb;
+    for (xx = 0; xx < NFA_EE_MAX_EE_SUPPORTED; xx++, p_cb++) {
+      memset(&p_cb->sys_code_cfg[0], 0x00, sizeof(p_cb->sys_code_cfg));
+      memset(&p_cb->sys_code_pwr_cfg[0], 0x00, sizeof(p_cb->sys_code_pwr_cfg));
+      memset(&p_cb->sys_code_rt_loc_vs_info[0], 0x00,
+             sizeof(p_cb->sys_code_rt_loc_vs_info));
+      memset(&p_cb->sys_code_rt_loc[0], 0x00, sizeof(p_cb->sys_code_rt_loc));
+
+      p_cb->sys_code_cfg_entries = 0;
+      p_cb->size_sys_code = 0;
+    }
+
+    memset(&p_ecb->sys_code_cfg[0], 0x00, sizeof(p_ecb->sys_code_cfg));
+    memset(&p_ecb->sys_code_pwr_cfg[0], 0x00, sizeof(p_ecb->sys_code_pwr_cfg));
+    memset(&p_ecb->sys_code_rt_loc_vs_info[0], 0x00,
+           sizeof(p_ecb->sys_code_rt_loc_vs_info));
+    memset(&p_ecb->sys_code_rt_loc[0], 0x00, sizeof(p_ecb->sys_code_rt_loc));
+
+    p_ecb->sys_code_cfg_entries = 0;
+    p_ecb->size_sys_code = 0;
+  }
+}
+
+/*******************************************************************************
+**
 ** Function         nfa_ee_api_pwr_and_link_ctrl
 **
 ** Description      Initiates closing of the connection to the given NFCEE
