@@ -1503,6 +1503,19 @@ void NFC_SetStaticHciCback(tNFC_CONN_CBACK* p_cback) {
 
 /*******************************************************************************
 **
+** Function         NFC_IsRfRemovalDetectionSupported
+**
+** Description      Indicates if RF Removal Detection mode is supported by NFCC
+**
+** Returns          true if supported else false.
+**
+*******************************************************************************/
+bool NFC_IsRfRemovalDetectionSupported() {
+  return (nfc_cb.nci_features & NCI_POLL_REMOVAL_DETECTION);
+}
+
+/*******************************************************************************
+**
 ** Function         NFC_GetStatusName
 **
 ** Description      This function returns the status name.

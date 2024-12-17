@@ -362,6 +362,7 @@ typedef uint8_t tNFC_RF_STS;
 typedef uint8_t tNFC_RF_TECH;
 
 extern uint8_t NFC_GetNCIVersion();
+extern bool NFC_IsRfRemovalDetectionSupported();
 
 /* Supported Protocols */
 #define NFC_PROTOCOL_UNKNOWN NCI_PROTOCOL_UNKNOWN /* Unknown */
