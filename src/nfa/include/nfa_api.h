@@ -1412,4 +1412,15 @@ tNFA_STATUS NFA_ChangeDiscoveryTech(tNFA_TECHNOLOGY_MASK pollTech,
                                     bool is_revert_poll, bool is_revert_listen,
                                     bool change_default_tech = false);
 
+/*******************************************************************************
+**
+** Function         NFA_IsRfRemovalDetectionSupported
+**
+** Description      Indicates if RF Removal Detection mode is supported by NFCC
+**
+** Returns          true if supported else false.
+**
+*******************************************************************************/
+bool NFA_IsRfRemovalDetectionSupported();
+
 #endif /* NFA_API_H */
