@@ -62,6 +62,7 @@ enum {
   NFA_EE_API_CONNECT_EVT,
   NFA_EE_API_SEND_DATA_EVT,
   NFA_EE_API_DISCONNECT_EVT,
+  NFA_EE_API_CLEAR_ROUTING_TABLE_EVT,
   NFA_EE_API_PWR_AND_LINK_CTRL_EVT,
 
   NFA_EE_NCI_DISC_RSP_EVT,
@@ -354,6 +355,14 @@ typedef struct {
   uint8_t config;
 } tNFA_EE_API_PWR_AND_LINK_CTRL;
 
+typedef struct {
+  NFC_HDR hdr;
+  tNFA_EE_ECB* p_cb;
+  bool clear_tech;
+  bool clear_proto;
+  bool clear_sc;
+} tNFA_EE_API_CLEAR_ROUTING_TABLE;
+
 /* common data type for internal events with nfa_ee_use_cfg_cb[] as TRUE */
 typedef struct {
   NFC_HDR hdr;
@@ -438,6 +447,7 @@ typedef union {
   tNFA_EE_API_CONNECT connect;
   tNFA_EE_API_SEND_DATA send_data;
   tNFA_EE_API_DISCONNECT disconnect;
+  tNFA_EE_API_CLEAR_ROUTING_TABLE clear_routing_table;
   tNFA_EE_API_PWR_AND_LINK_CTRL pwr_and_link_ctrl;
   tNFA_EE_NCI_DISC_RSP disc_rsp;
   tNFA_EE_NCI_DISC_NTF disc_ntf;
@@ -572,6 +582,7 @@ void nfa_ee_api_update_now(tNFA_EE_MSG* p_data);
 void nfa_ee_api_connect(tNFA_EE_MSG* p_data);
 void nfa_ee_api_send_data(tNFA_EE_MSG* p_data);
 void nfa_ee_api_disconnect(tNFA_EE_MSG* p_data);
+void nfa_ee_api_clear_routing_table(tNFA_EE_MSG* p_data);
 void nfa_ee_api_pwr_and_link_ctrl(tNFA_EE_MSG* p_data);
 void nfa_ee_report_disc_done(bool notify_sys);
 void nfa_ee_nci_disc_rsp(tNFA_EE_MSG* p_data);

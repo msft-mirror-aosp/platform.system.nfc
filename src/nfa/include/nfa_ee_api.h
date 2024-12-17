@@ -606,4 +606,16 @@ extern tNFA_STATUS NFA_EeDisconnect(tNFA_HANDLE ee_handle);
 extern tNFA_STATUS NFA_EePowerAndLinkCtrl(tNFA_HANDLE ee_handle,
                                           uint8_t config);
 
+/*******************************************************************************
+**
+** Function         NFA_EeClearRoutingTable
+**
+** Description
+**
+** Returns          NFA_STATUS_OK if successful
+**
+*******************************************************************************/
+extern tNFA_STATUS NFA_EeClearRoutingTable(bool clear_tech, bool clear_proto,
+                                           bool clear_sc);
+
 #endif /* NFA_EE_API_H */
