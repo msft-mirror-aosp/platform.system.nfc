@@ -995,3 +995,37 @@ tNFA_STATUS NFA_EePowerAndLinkCtrl(tNFA_HANDLE ee_handle, uint8_t config) {
 
   return status;
 }
+
+/*******************************************************************************
+**
+** Function         NFA_EeClearRoutingTable
+**
+** Description      Clears all SC, tech and protocol entries in RT
+**
+** Returns          NFA_STATUS_OK if successful
+**
+*******************************************************************************/
+tNFA_STATUS NFA_EeClearRoutingTable(bool clear_tech, bool clear_proto,
+                                    bool clear_sc) {
+  tNFA_EE_API_CLEAR_ROUTING_TABLE* p_msg;
+  tNFA_STATUS status = NFA_STATUS_FAILED;
+
+  LOG(DEBUG) << StringPrintf(
+      "%s; clear_tech: %d, clear_proto: %d, clear_sc: %d", __func__, clear_tech,
+      clear_proto, clear_sc);
+
+  if ((p_msg = (tNFA_EE_API_CLEAR_ROUTING_TABLE*)GKI_getbuf(
+           sizeof(tNFA_EE_API_CLEAR_ROUTING_TABLE))) != nullptr) {
+    p_msg->hdr.event = NFA_EE_API_CLEAR_ROUTING_TABLE_EVT;
+    p_msg->clear_tech = clear_tech;
+    p_msg->clear_proto = clear_proto;
+    p_msg->clear_sc = clear_sc;
+    p_msg->p_cb = 0;
+
+    nfa_sys_sendmsg(p_msg);
+
+    status = NFA_STATUS_OK;
+  }
+
+  return status;
+}
