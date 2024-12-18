@@ -236,6 +236,7 @@
 #define NCI_ANDROID_POWER_SAVING 0x1
 #define NCI_ANDROID_PASSIVE_OBSERVE 0x2
 #define NCI_QUERY_ANDROID_PASSIVE_OBSERVE 0x4
+#define NCI_ANDROID_BLANK_NCI 0x7
 
 /* Android Get Proprietary Caps */
 #define NCI_ANDROID_GET_CAPS_PARAM_SIZE 0x1
@@ -250,6 +251,10 @@
 #define NCI_QUERY_ANDROID_PASSIVE_OBSERVE_PARAM_SIZE 0x1
 #define NCI_ANDROID_PASSIVE_OBSERVE_PARAM_DISABLE 0x0
 #define NCI_ANDROID_PASSIVE_OBSERVE_PARAM_ENABLE 0x1
+
+/* Android Blank NCI Settings */
+#define NCI_ANDROID_BLANK_COMMON 0x0
+#define NCI_ANDROID_BLANK_VENDOR 0x1
 /**********************************************
  * NCI Core Group Params
  **********************************************/
