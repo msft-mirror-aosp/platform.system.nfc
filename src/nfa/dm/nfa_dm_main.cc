@@ -168,13 +168,13 @@ void nfa_dm_sys_disable(void) {
 **
 *******************************************************************************/
 bool nfa_dm_is_protocol_supported(tNFC_PROTOCOL protocol, uint8_t sel_res) {
-  return ((protocol == NFC_PROTOCOL_T1T) ||
-          ((protocol == NFC_PROTOCOL_T2T) &&
-           (sel_res == NFC_SEL_RES_NFC_FORUM_T2T)) ||
-          (protocol == NFC_PROTOCOL_T3T) ||
-          (protocol == NFC_PROTOCOL_ISO_DEP) ||
-          (protocol == NFC_PROTOCOL_NFC_DEP) ||
-          (protocol == NFC_PROTOCOL_T5T) || (protocol == NFC_PROTOCOL_MIFARE));
+  return (
+      (protocol == NFC_PROTOCOL_T1T) ||
+      ((protocol == NFC_PROTOCOL_T2T) &&
+       (sel_res == NFC_SEL_RES_NFC_FORUM_T2T)) ||
+      (protocol == NFC_PROTOCOL_T3T) || (protocol == NFC_PROTOCOL_ISO_DEP) ||
+      (protocol == NFC_PROTOCOL_NFC_DEP) || (protocol == NFC_PROTOCOL_T5T) ||
+      (protocol == NFC_PROTOCOL_MIFARE) || (protocol == NFA_PROTOCOL_CI));
 }
 /*******************************************************************************
 **
@@ -304,6 +304,11 @@ tNFA_STATUS nfa_dm_check_set_config(uint8_t tlv_list_len, uint8_t* p_tlv_list,
         max_len = NCI_PARAM_LEN_LB_ADC_FO;
         p_cur_len = &nfa_dm_cb.params.lb_adc_fo_len;
         break;
+      case NFC_PMID_RF_FIELD_INFO:
+        p_stored = nfa_dm_cb.params.rf_field_info;
+        max_len = NCI_PARAM_LEN_RF_FIELD_INFO;
+        p_cur_len = &nfa_dm_cb.params.rf_field_info_len;
+        break;
       case NFC_PMID_LB_H_INFO:
         p_stored = nfa_dm_cb.params.lb_h_info;
         max_len = NCI_MAX_ATTRIB_LEN;
@@ -334,20 +339,6 @@ tNFA_STATUS nfa_dm_check_set_config(uint8_t tlv_list_len, uint8_t* p_tlv_list,
       case NFC_PMID_FWI:
         p_stored = nfa_dm_cb.params.fwi;
         max_len = NCI_PARAM_LEN_FWI;
-        break;
-      case NFC_PMID_WT:
-        p_stored = nfa_dm_cb.params.wt;
-        max_len = NCI_PARAM_LEN_WT;
-        break;
-      case NFC_PMID_ATR_REQ_GEN_BYTES:
-        p_stored = nfa_dm_cb.params.atr_req_gen_bytes;
-        max_len = NCI_MAX_GEN_BYTES_LEN;
-        p_cur_len = &nfa_dm_cb.params.atr_req_gen_bytes_len;
-        break;
-      case NFC_PMID_ATR_RES_GEN_BYTES:
-        p_stored = nfa_dm_cb.params.atr_res_gen_bytes;
-        max_len = NCI_MAX_GEN_BYTES_LEN;
-        p_cur_len = &nfa_dm_cb.params.atr_res_gen_bytes_len;
         break;
       default:
         /*

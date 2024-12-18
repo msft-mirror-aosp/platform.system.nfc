@@ -36,6 +36,7 @@ typedef struct {
   uint8_t pro_discovery_kovio_poll;
   uint8_t pro_discovery_b_prime_poll;
   uint8_t pro_discovery_b_prime_listen;
+  uint8_t pro_protocol_chinese_id;
 } tNFA_PROPRIETARY_CFG;
 
 extern tNFA_PROPRIETARY_CFG* p_nfa_proprietary_cfg;
@@ -61,6 +62,9 @@ extern tNFA_PROPRIETARY_CFG* p_nfa_proprietary_cfg;
 #endif
 #ifndef NCI_PROTOCOL_MIFARE
 #define NCI_PROTOCOL_MIFARE (p_nfa_proprietary_cfg->pro_protocol_mfc)
+#endif
+#ifndef NCI_PROTOCOL_CI
+#define NCI_PROTOCOL_CI (p_nfa_proprietary_cfg->pro_protocol_chinese_id)
 #endif
 
 /**********************************************
