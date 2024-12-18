@@ -49,23 +49,12 @@ cc_library_static {
         "//apex_available:platform",
         "com.android.nfcservices",
     ],
-}
-
-cc_test {
-    name: "nfc_test_utils",
-    defaults: ["nfc_utils_defaults"],
-    test_suites: ["device-tests"],
-    host_supported: true,
-    srcs: [
-        "test/config_test.cc",
-        "test/ringbuffer_test.cc",
-    ],
-    static_libs: [
-        "libnfcutils",
-        "libgmock",
-    ],
-    shared_libs: [
-        "libbase",
+    min_sdk_version: "35", // Make it 36 once available.
+    visibility: [
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
     ],
 }
 

@@ -140,21 +140,36 @@ static void rw_t2t_proc_data(uint8_t conn_id, tNFC_DATA_CEVT* p_data) {
     evt_data.p_data = p_pkt;
     if (p_t2t->state == RW_T2T_STATE_READ) b_release = false;
 
-    LOG(VERBOSE) << StringPrintf(
-        "rw_t2t_proc_data - Received NACK response(0x%x)", (*p & 0x0f));
+    if (p_t2t->state == RW_T2T_STATE_CHECK_PRESENCE) {
+      LOG(DEBUG) << StringPrintf(
+          "%s; Received NACK response(0x%x) while presence "
+          "checking",
+          __func__, (*p & 0x0f));
+      // Consider tag present
+      rw_t2t_handle_presence_check_rsp(NFC_STATUS_OK);
 
-    if (!p_t2t->check_tag_halt) {
-      /* Just received first NACK. Retry just one time to find if tag went in to
-       * HALT State */
+      // Once this has been processed, there is no need for notification
+      // as already done.
+      // Release still need to free the buffer
       b_notify = false;
-      rw_t2t_process_error();
-      /* Assume Tag is in HALT State, untill we get response to retry command */
-      p_t2t->check_tag_halt = true;
     } else {
-      p_t2t->check_tag_halt = false;
-      /* Got consecutive NACK so tag not really halt after first NACK, but
-       * current operation failed */
-      evt_data.status = NFC_STATUS_FAILED;
+      LOG(DEBUG) << StringPrintf("%s; Received NACK response(0x%x)", __func__,
+                                 (*p & 0x0f));
+
+      if (!p_t2t->check_tag_halt) {
+        /* Just received first NACK. Retry just one time to find if tag went in
+         * to HALT State */
+        b_notify = false;
+        rw_t2t_process_error();
+        /* Assume Tag is in HALT State, until we get response to retry command
+         */
+        p_t2t->check_tag_halt = true;
+      } else {
+        p_t2t->check_tag_halt = false;
+        /* Got consecutive NACK so tag not really halt after first NACK, but
+         * current operation failed */
+        evt_data.status = NFC_STATUS_FAILED;
+      }
     }
   } else {
     /* If the response length indicates positive response or cannot be known
@@ -822,7 +837,7 @@ tNFC_STATUS rw_t2t_select(void) {
       return (NFC_STATUS_FAILED);
     }
   }
-  /* Alloc cmd buf for holding a command untill sector changes */
+  /* Alloc cmd buf for holding a command until sector changes */
   if (p_t2t->p_sec_cmd_buf == nullptr) {
     p_t2t->p_sec_cmd_buf = (NFC_HDR*)GKI_getpoolbuf(NFC_RW_POOL_ID);
     if (p_t2t->p_sec_cmd_buf == nullptr) {

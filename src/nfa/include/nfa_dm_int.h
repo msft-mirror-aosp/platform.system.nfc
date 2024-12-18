@@ -299,30 +299,21 @@ typedef uint8_t tNFA_DM_RF_DISC_EVT;
 #define NFA_DM_DISC_MASK_P_T5T 0x00000100
 #define NFA_DM_DISC_MASK_P_B_PRIME 0x00000200
 #define NFA_DM_DISC_MASK_P_KOVIO 0x00000400
-#define NFA_DM_DISC_MASK_PAA_NFC_DEP 0x00000800
-#define NFA_DM_DISC_MASK_PACM_NFC_DEP 0x00000800
-#define NFA_DM_DISC_MASK_PFA_NFC_DEP 0x00001000
 /* Legacy/proprietary/non-NFC Forum protocol (e.g Shanghai transit card) */
 #define NFA_DM_DISC_MASK_P_LEGACY 0x00002000
 #define NFA_DM_DISC_MASK_PA_MIFARE 0x00004000
+#define NFA_DM_DISC_MASK_PB_CI 0x00008000
 #define NFA_DM_DISC_MASK_POLL 0x0000FFFF
 
 #define NFA_DM_DISC_MASK_LA_T1T 0x00010000
 #define NFA_DM_DISC_MASK_LA_T2T 0x00020000
 #define NFA_DM_DISC_MASK_LA_ISO_DEP 0x00040000
-#define NFA_DM_DISC_MASK_LA_NFC_DEP 0x00080000
 #define NFA_DM_DISC_MASK_LB_ISO_DEP 0x00100000
 #define NFA_DM_DISC_MASK_LF_T3T 0x00200000
-#define NFA_DM_DISC_MASK_LF_NFC_DEP 0x00400000
 #define NFA_DM_DISC_MASK_L_ISO15693 0x01000000
 #define NFA_DM_DISC_MASK_L_B_PRIME 0x02000000
-#define NFA_DM_DISC_MASK_LACM_NFC_DEP 0x04000000
-#define NFA_DM_DISC_MASK_LAA_NFC_DEP 0x04000000
-#define NFA_DM_DISC_MASK_LFA_NFC_DEP 0x08000000
 #define NFA_DM_DISC_MASK_L_LEGACY 0x10000000
 #define NFA_DM_DISC_MASK_LISTEN 0xFFFF0000
-
-#define NFA_DM_DISC_MASK_NFC_DEP 0x0C481848
 
 typedef uint32_t tNFA_DM_DISC_TECH_PROTO_MASK;
 
@@ -381,12 +372,6 @@ enum {
 
 /* NFA_EE_MAX_TECH_ROUTE. only A, B, F, Bprime are supported by UICC now */
 #define NFA_DM_MAX_TECH_ROUTE 4
-
-/* timeout for waiting deactivation NTF,
-** possible delay to send deactivate CMD if all credit wasn't returned
-** transport delay (1sec) and max RWT (5sec)
-*/
-#define NFA_DM_DISC_TIMEOUT_W4_DEACT_NTF (NFC_DEACTIVATE_TIMEOUT * 1000 + 6000)
 
 typedef struct {
   uint16_t disc_duration; /* Disc duration                                    */
@@ -508,6 +493,8 @@ typedef struct {
   uint8_t atr_res_gen_bytes_len;
 
   uint8_t pf_rc[NCI_PARAM_LEN_PF_RC];
+  uint8_t rf_field_info[NCI_PARAM_LEN_RF_FIELD_INFO];
+  uint8_t rf_field_info_len;
 } tNFA_DM_PARAMS;
 
 /*
@@ -562,9 +549,10 @@ typedef struct {
   /* NFCC power mode */
   uint8_t nfcc_pwr_mode; /* NFA_DM_PWR_MODE_FULL or NFA_DM_PWR_MODE_OFF_SLEEP */
 
+  tNFC_DEACT_TYPE listen_deact_cmd_type;
   uint8_t deactivate_cmd_retry_count; /*number of times the deactivation cmd
                                          sent in case of error scenerio */
-
+  bool is_nfc_secure;
   uint8_t power_state; /* current screen/power  state */
   uint32_t eDtaMode;   /* To enable the DTA type modes. */
   uint8_t pending_power_state; /* pending screen state change received in
@@ -688,6 +676,7 @@ tNFC_STATUS nfa_dm_disc_sleep_wakeup(void);
 tNFC_STATUS nfa_dm_disc_start_kovio_presence_check(void);
 bool nfa_dm_is_raw_frame_session(void);
 
+bool nfa_dm_get_nfc_secure();
 void nfa_dm_get_tech_route_block(uint8_t* listen_techmask, bool* enable);
 void nfa_dm_start_wireless_power_transfer(uint8_t power_adj_req,
                                           uint8_t wpt_time_int);

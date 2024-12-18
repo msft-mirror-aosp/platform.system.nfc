@@ -66,6 +66,7 @@ cc_library {
         "nfa/sys/*.cc",
         "nfa/wlc/*.cc",
         "nfc/nci/*.cc",
+        "nfa/ndefnfcee/t4t/*.cc",
         "nfc/ndef/*.cc",
         "nfc/nfc/*.cc",
         "nfc/tags/*.cc",
@@ -89,6 +90,15 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
         "com.android.nfcservices",
+    ],
+    min_sdk_version: "35", // Make it 36 once available.
+    visibility: [
+        "//cts:__subpackages__",
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
+        "//test/sts:__subpackages__",
     ],
 }
 
@@ -132,7 +142,7 @@ cc_defaults {
     fuzz_config: {
         cc: [
             "android-security-assurance-redteam@google.com",
-            "zachoverflow@google.com",
+            "rpius@google.com",
             "jackcwyu@google.com",
             "georgekgchang@google.com",
             "alisher@google.com",
@@ -162,6 +172,13 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
         "com.android.nfcservices",
+    ],
+    min_sdk_version: "35", // Make it 36 once available.
+    visibility: [
+        "//hardware/interfaces/nfc/aidl/vts/functional:__subpackages__",
+        "//packages/apps/Nfc:__subpackages__",
+        "//packages/modules/Nfc:__subpackages__",
+        "//system/nfc:__subpackages__",
     ],
 }
 
@@ -280,6 +297,7 @@ cc_fuzz {
         "nfa/ee/*.cc",
         "nfa/hci/*.cc",
         "nfa/rw/*.cc",
+        "nfa/ndefnfcee/t4t/*.cc",
         "nfa/sys/*.cc",
         "nfa/wlc/*.cc",
         "nfc/nci/*.cc",

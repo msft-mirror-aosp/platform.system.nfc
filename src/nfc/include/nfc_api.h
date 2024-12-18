@@ -120,8 +120,6 @@ typedef uint8_t tNFC_STATUS;
 #define NFC_PMID_PF_BIT_RATE NCI_PARAM_ID_PF_BIT_RATE
 #define NFC_PMID_PF_BAILOUT NCI_PARAM_ID_PF_BAILOUT
 #define NFC_PMID_PF_DEVICES_LIMIT NCI_PARAM_ID_PF_DEVICES_LIMIT
-#define NFC_PMID_ATR_REQ_GEN_BYTES NCI_PARAM_ID_ATR_REQ_GEN_BYTES
-#define NFC_PMID_ATR_REQ_CONFIG NCI_PARAM_ID_ATR_REQ_CONFIG
 #define NFC_PMID_LA_HIST_BY NCI_PARAM_ID_LA_HIST_BY
 #define NFC_PMID_LA_NFCID1 NCI_PARAM_ID_LA_NFCID1
 #define NFC_PMID_LA_BIT_FRAME_SDD NCI_PARAM_ID_LA_BIT_FRAME_SDD
@@ -139,10 +137,6 @@ typedef uint8_t tNFC_STATUS;
 #define NFC_PMID_LF_T3T_FLAGS2 NCI_PARAM_ID_LF_T3T_FLAGS2
 #define NFC_PMID_FWI NCI_PARAM_ID_FWI
 #define NFC_PMID_LF_CON_BITR_F NCI_PARAM_ID_LF_CON_BITR_F
-#define NFC_PMID_WT NCI_PARAM_ID_WT
-#define NFC_PMID_ATR_RES_GEN_BYTES NCI_PARAM_ID_ATR_RES_GEN_BYTES
-#define NFC_PMID_ATR_RSP_CONFIG NCI_PARAM_ID_ATR_RSP_CONFIG
-#define NFC_PMID_PACM_BIT_RATE NCI_PARAM_ID_PACM_BIT_RATE
 #define NFC_PMID_RF_FIELD_INFO NCI_PARAM_ID_RF_FIELD_INFO
 
 /* Technology based routing  */
@@ -381,6 +375,7 @@ extern uint8_t NFC_GetNCIVersion();
 #define NFC_PROTOCOL_T5T NFC_PROTOCOL_T5T_(NFC_GetNCIVersion())
 #define NFC_PROTOCOL_T5T_(x) \
   (((x) >= NCI_VERSION_2_0) ? NCI_PROTOCOL_T5T : NCI_PROTOCOL_15693)
+#define NFC_PROTOCOL_CI NCI_PROTOCOL_CI
 /* Type 4A,4B  - NFC-A or NFC-B   */
 #define NFC_PROTOCOL_ISO_DEP NCI_PROTOCOL_ISO_DEP
 /* NFCDEP/LLCP - NFC-A or NFC-F       */
@@ -421,7 +416,6 @@ typedef uint8_t tNFC_BIT_RATE;
 #define NFC_INTERFACE_EE_DIRECT_RF NCI_INTERFACE_EE_DIRECT_RF
 #define NFC_INTERFACE_FRAME NCI_INTERFACE_FRAME
 #define NFC_INTERFACE_ISO_DEP NCI_INTERFACE_ISO_DEP
-#define NFC_INTERFACE_NFC_DEP NCI_INTERFACE_NFC_DEP
 #define NFC_INTERFACE_MIFARE NCI_INTERFACE_VS_MIFARE
 typedef tNCI_INTF_TYPE tNFC_INTF_TYPE;
 
@@ -650,28 +644,6 @@ typedef struct {
 
 typedef struct { uint8_t rats; /* RATS */ } tNFC_INTF_LA_ISO_DEP;
 
-typedef struct {
-  uint8_t atr_res_len;                      /* Length of ATR_RES            */
-  uint8_t atr_res[NFC_MAX_ATS_LEN];         /* ATR_RES (Byte 3 - Byte 17+n) */
-  uint8_t max_payload_size;                 /* 64, 128, 192 or 254          */
-  uint8_t gen_bytes_len;                    /* len of general bytes         */
-  uint8_t gen_bytes[NFC_MAX_GEN_BYTES_LEN]; /* general bytes           */
-  uint8_t
-      waiting_time; /* WT -> Response Waiting Time RWT = (256 x 16/fC) x 2WT */
-} tNFC_INTF_PA_NFC_DEP;
-
-/* Note: keep tNFC_INTF_PA_NFC_DEP data member in the same order as
- * tNFC_INTF_LA_NFC_DEP */
-typedef struct {
-  uint8_t atr_req_len;                      /* Length of ATR_REQ            */
-  uint8_t atr_req[NFC_MAX_ATS_LEN];         /* ATR_REQ (Byte 3 - Byte 18+n) */
-  uint8_t max_payload_size;                 /* 64, 128, 192 or 254          */
-  uint8_t gen_bytes_len;                    /* len of general bytes         */
-  uint8_t gen_bytes[NFC_MAX_GEN_BYTES_LEN]; /* general bytes           */
-} tNFC_INTF_LA_NFC_DEP;
-typedef tNFC_INTF_LA_NFC_DEP tNFC_INTF_LF_NFC_DEP;
-typedef tNFC_INTF_PA_NFC_DEP tNFC_INTF_PF_NFC_DEP;
-
 #define NFC_MAX_ATTRIB_LEN NCI_MAX_ATTRIB_LEN
 
 typedef struct {
@@ -706,10 +678,6 @@ typedef struct {
     tNFC_INTF_PA_ISO_DEP pa_iso;
     tNFC_INTF_LB_ISO_DEP lb_iso;
     tNFC_INTF_PB_ISO_DEP pb_iso;
-    tNFC_INTF_LA_NFC_DEP la_nfc;
-    tNFC_INTF_PA_NFC_DEP pa_nfc;
-    tNFC_INTF_LF_NFC_DEP lf_nfc;
-    tNFC_INTF_PF_NFC_DEP pf_nfc;
     tNFC_INTF_FRAME frame;
   } intf_param; /* Activation Parameters   0 - n Bytes */
 } tNFC_INTF_PARAMS;
@@ -807,6 +775,7 @@ typedef void(tNFC_CONN_CBACK)(uint8_t conn_id, tNFC_CONN_EVT event,
 #define NFC_RF_CONN_ID 0
 /* the static connection ID for HCI transport */
 #define NFC_HCI_CONN_ID 1
+#define NFC_T4TNFCEE_CONN_ID 0x05
 
 /*****************************************************************************
 **  EXTERNAL FUNCTION DECLARATIONS
@@ -1067,6 +1036,21 @@ extern tNFC_STATUS NFC_ConnClose(uint8_t conn_id);
 **
 *******************************************************************************/
 extern void NFC_SetStaticRfCback(tNFC_CONN_CBACK* p_cback);
+
+/*******************************************************************************
+**
+** Function         NFC_SetStaticT4tNfceeCback
+**
+** Description      This function is called to update the data callback function
+**                  to receive the data for the given connection id.
+**
+** Parameters       p_cback - the connection callback function
+**                  connId - connection ID for T4T NFCEE
+**
+** Returns          Nothing
+**
+*******************************************************************************/
+void NFC_SetStaticT4tNfceeCback(tNFC_CONN_CBACK* p_cback, uint8_t connId);
 
 /*******************************************************************************
 **

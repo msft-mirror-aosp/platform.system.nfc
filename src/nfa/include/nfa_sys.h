@@ -34,16 +34,17 @@
 
 /* SW sub-systems */
 enum {
-  NFA_ID_SYS,  /* system manager                      */
-  NFA_ID_DM,   /* device manager                      */
-  NFA_ID_EE,   /* NFCEE sub-system                    */
-  NFA_ID_RW,   /* Reader/writer sub-system            */
-  NFA_ID_CE,   /* Card-emulation sub-system           */
-  NFA_ID_HCI,  /* Host controller interface sub-system*/
-  NFA_ID_WLC,  /* WLC sub-system */
+  NFA_ID_SYS, /* system manager                      */
+  NFA_ID_DM,  /* device manager                      */
+  NFA_ID_EE,  /* NFCEE sub-system                    */
+  NFA_ID_RW,  /* Reader/writer sub-system            */
+  NFA_ID_CE,  /* Card-emulation sub-system           */
+  NFA_ID_HCI, /* Host controller interface sub-system*/
+  NFA_ID_WLC, /* WLC sub-system */
 #if (NFA_DTA_INCLUDED == TRUE)
   NFA_ID_DTA, /* Device Test Application sub-system  */
 #endif
+  NFA_ID_T4TNFCEE, /* T4T Nfcee sub-system  */
   NFA_ID_MAX
 };
 typedef uint8_t tNFA_SYS_ID;
@@ -118,5 +119,5 @@ extern void nfa_sys_notify_nfcc_power_mode(uint8_t nfcc_power_mode);
 extern void nfa_sys_cback_reg_nfcc_power_mode_proc_complete(
     tNFA_SYS_PROC_NFCC_PWR_MODE_CMPL* p_cback);
 extern void nfa_sys_cback_notify_nfcc_power_mode_proc_complete(uint8_t id);
-
+extern void nfa_sys_cback_notify_partial_enable_complete(uint8_t id);
 #endif /* NFA_SYS_H */
