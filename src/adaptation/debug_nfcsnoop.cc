@@ -62,6 +62,13 @@ static const size_t VENDOR_BUFFER_INDEX = 1;
 static const char* BUFFER_NAMES[BUFFER_SIZE] = {"LOG_SUMMARY",
                                                 "VS_LOG_SUMMARY"};
 
+// When the time diff larger than UINT32_MAX, fill in blank NCI in between
+static const uint8_t EMPTY_NCI[BUFFER_SIZE][5] = {
+    {0x6F, NCI_MSG_PROP_ANDROID, 0x02, NCI_ANDROID_BLANK_NCI,
+     NCI_ANDROID_BLANK_COMMON},
+    {0x6F, NCI_MSG_PROP_ANDROID, 0x02, NCI_ANDROID_BLANK_NCI,
+     NCI_ANDROID_BLANK_VENDOR}};
+
 static std::mutex buffer_mutex;
 static ringbuffer_t* buffers[BUFFER_SIZE] = {nullptr, nullptr};
 static uint64_t last_timestamp_ms[BUFFER_SIZE] = {0, 0};
@@ -75,7 +82,24 @@ static void nfcsnoop_cb(const uint8_t* data, const size_t length,
                         size_t buffer_index) {
   nfcsnooz_header_t header;
 
-  std::lock_guard<std::mutex> lock(buffer_mutex);
+  uint64_t delta_time_ms = 0;
+  if (last_timestamp_ms[buffer_index]) {
+    __builtin_sub_overflow(timestamp_us, last_timestamp_ms[buffer_index],
+                           &delta_time_ms);
+  }
+
+  while (delta_time_ms > UINT32_MAX) {
+    LOG(WARNING) << StringPrintf("Add empty nci to snoop buffer %zu",
+                                 buffer_index);
+    uint64_t middle_time = last_timestamp_ms[buffer_index] + UINT32_MAX;
+    nfcsnoop_cb(EMPTY_NCI[buffer_index],
+                EMPTY_NCI[buffer_index][2] + NCI_MSG_HDR_SIZE, true,
+                middle_time, buffer_index);
+    if (last_timestamp_ms[buffer_index]) {
+      __builtin_sub_overflow(timestamp_us, last_timestamp_ms[buffer_index],
+                             &delta_time_ms);
+    }
+  }
 
   // Make room in the ring buffer
 
@@ -90,11 +114,7 @@ static void nfcsnoop_cb(const uint8_t* data, const size_t length,
   header.length = length;
   header.is_received = is_received ? 1 : 0;
 
-  uint64_t delta_time_ms = 0;
-  if (last_timestamp_ms[buffer_index]) {
-    __builtin_sub_overflow(timestamp_us, last_timestamp_ms[buffer_index],
-                           &delta_time_ms);
-  }
+  // Note: casting uint64 to uint32
   header.delta_time_ms = delta_time_ms;
 
   last_timestamp_ms[buffer_index] = timestamp_us;
@@ -102,6 +122,13 @@ static void nfcsnoop_cb(const uint8_t* data, const size_t length,
   ringbuffer_insert(buffers[buffer_index], (uint8_t*)&header,
                     sizeof(nfcsnooz_header_t));
   ringbuffer_insert(buffers[buffer_index], data, length);
+}
+
+static void nfcsnoop_cb_locked(const uint8_t* data, const size_t length,
+                               bool is_received, const uint64_t timestamp_us,
+                               size_t buffer_index) {
+  std::lock_guard<std::mutex> lock(buffer_mutex);
+  nfcsnoop_cb(data, length, is_received, timestamp_us, buffer_index);
 }
 
 static bool nfcsnoop_compress(ringbuffer_t* rb_dst, ringbuffer_t* rb_src) {
@@ -166,15 +193,15 @@ void nfcsnoop_capture(const NFC_HDR* packet, bool is_received) {
   }
 
   if (mt == NCI_MT_NTF && gid == NCI_GID_PROP) {
-    nfcsnoop_cb(p, p[2] + NCI_MSG_HDR_SIZE, is_received, timestamp,
-                VENDOR_BUFFER_INDEX);
+    nfcsnoop_cb_locked(p, p[2] + NCI_MSG_HDR_SIZE, is_received, timestamp,
+                       VENDOR_BUFFER_INDEX);
   } else if (mt == NCI_MT_DATA) {
-    nfcsnoop_cb(p,
-                isFullNfcSnoop ? p[2] + NCI_DATA_HDR_SIZE : NCI_DATA_HDR_SIZE,
-                is_received, timestamp, SYSTEM_BUFFER_INDEX);
+    nfcsnoop_cb_locked(
+        p, isFullNfcSnoop ? p[2] + NCI_DATA_HDR_SIZE : NCI_DATA_HDR_SIZE,
+        is_received, timestamp, SYSTEM_BUFFER_INDEX);
   } else if (packet->len > 2) {
-    nfcsnoop_cb(p, p[2] + NCI_MSG_HDR_SIZE, is_received, timestamp,
-                SYSTEM_BUFFER_INDEX);
+    nfcsnoop_cb_locked(p, p[2] + NCI_MSG_HDR_SIZE, is_received, timestamp,
+                       SYSTEM_BUFFER_INDEX);
   }
 }
 
