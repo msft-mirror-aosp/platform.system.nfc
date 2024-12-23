@@ -215,6 +215,7 @@
 #define NCI_MSG_RF_INTF_EXT_START 12
 #define NCI_MSG_RF_INTF_EXT_STOP 13
 #define NCI_MSG_RF_ISO_DEP_NAK_PRESENCE 16
+#define NCI_MSG_RF_REMOVAL_DETECTION 18
 #define NCI_MSG_WPT_START 21
 
 /**********************************************
@@ -272,6 +273,7 @@
  * NCI Feature Bit
  **********************************************/
 #define NCI_FEAT_HCI_NETWORK 0x00000008
+#define NCI_POLL_REMOVAL_DETECTION 0x00000020
 
 #define NCI_CORE_PARAM_SIZE_INIT(X) (((X) >= NCI_VERSION_2_0) ? (0x02) : (0x00))
 #define NCI2_X_CORE_INIT_CMD_BYTE_0 0x00
@@ -398,6 +400,7 @@ typedef uint8_t tNCI_INTF_EXT_TYPE;
 
 #define NCI_DISCOVER_PARAM_SIZE_SELECT 0x03 /* ID, protocol, interface */
 #define NCI_DISCOVER_PARAM_SIZE_DEACT 0x01  /* type */
+#define NCI_DISCOVER_PARAM_SIZE_DETECT 0x01 /* waiting_time */
 #define NCI_DISCOVER_PARAM_SIZE_EXT 0x02    /* ID, parameter length */
 
 /**********************************************

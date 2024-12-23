@@ -528,6 +528,38 @@ uint8_t nci_snd_rf_extension_control_cmd(uint8_t mode, uint8_t rf_ext_id,
 
 /*******************************************************************************
 **
+** Function         nci_snd_ep_removal_detection_cmd
+**
+** Description      compose and send RF Management REMOVAL_DETECTION command
+**                  to command queue
+**
+** Returns          status
+**
+*******************************************************************************/
+uint8_t nci_snd_ep_removal_detection_cmd(uint8_t waiting_time) {
+  NFC_HDR* p;
+  uint8_t* pp;
+
+  p = NCI_GET_CMD_BUF(NCI_DISCOVER_PARAM_SIZE_DETECT);
+  if (p == nullptr) return (NCI_STATUS_FAILED);
+
+  p->event = BT_EVT_TO_NFC_NCI;
+  p->len = NCI_MSG_HDR_SIZE + NCI_DISCOVER_PARAM_SIZE_DETECT;
+  p->offset = NCI_MSG_OFFSET_SIZE;
+  p->layer_specific = 0;
+  pp = (uint8_t*)(p + 1) + p->offset;
+
+  NCI_MSG_BLD_HDR0(pp, NCI_MT_CMD, NCI_GID_RF_MANAGE);
+  NCI_MSG_BLD_HDR1(pp, NCI_MSG_RF_REMOVAL_DETECTION);
+  UINT8_TO_STREAM(pp, NCI_DISCOVER_PARAM_SIZE_DETECT);
+  UINT8_TO_STREAM(pp, waiting_time);
+
+  nfc_ncif_send_cmd(p);
+  return (NCI_STATUS_OK);
+}
+
+/*******************************************************************************
+**
 ** Function         nci_snd_rf_wpt_control_cmd
 **
 ** Description      compose and send RF Management WPT_START command

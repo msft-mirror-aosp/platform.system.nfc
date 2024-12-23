@@ -796,6 +796,40 @@ tNFA_STATUS NFA_UpdateRFCommParams(tNFA_RF_COMM_PARAMS* p_params) {
 
 /*******************************************************************************
 **
+** Function         NFA_StartRemovalDetection
+**
+** Description      Start the detection of RF endpoint removal when data
+*exchange
+**                  ore charging with listener completed.
+**
+**                  An NFA_DETECT_REMOVAL_RESULT_EVT indicates whether start
+**                  was successful or not.
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+tNFA_STATUS NFA_StartRemovalDetection(uint8_t waiting_time_int) {
+  tNFA_DM_API_START_REMOVAL_DETECT* p_msg;
+
+  LOG(VERBOSE) << StringPrintf("%s; waiting_time_int:0x%X", __func__,
+                               waiting_time_int);
+
+  p_msg = (tNFA_DM_API_START_REMOVAL_DETECT*)GKI_getbuf(
+      (uint8_t)(sizeof(tNFA_DM_API_START_REMOVAL_DETECT)));
+  if (p_msg != nullptr) {
+    p_msg->hdr.event = NFA_DM_API_START_REMOVAL_DETECT_EVT;
+    p_msg->waiting_time_int = waiting_time_int;
+    nfa_sys_sendmsg(p_msg);
+
+    return (NFA_STATUS_OK);
+  }
+
+  return (NFA_STATUS_FAILED);
+}
+
+/*******************************************************************************
+**
 ** Function         NFA_Deactivate
 **
 ** Description
