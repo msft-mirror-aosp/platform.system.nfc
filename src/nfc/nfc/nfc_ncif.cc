@@ -167,6 +167,13 @@ uint8_t nfc_ncif_send_data(tNFC_CONN_CB* p_cb, NFC_HDR* p_data) {
       return NCI_STATUS_FAILED;
     }
   }
+  if (nfc_cb.flags & NFC_FL_WAIT_RF_INTF_EXT_RSP) {
+    LOG(VERBOSE) << StringPrintf(
+        "%s; fail to send NCI data while waiting response for RF interface"
+        " extension command",
+        __func__);
+    return NCI_STATUS_FAILED;
+  }
 
   if (p_data) {
     /* always enqueue the data to the tx queue */

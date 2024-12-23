@@ -134,13 +134,15 @@ bool nfa_wlc_start(tNFA_WLC_MSG* p_data) {
 
     nfa_wlc_cb.wlc_mode = p_data->start.mode;
 
+    /* Start Parameter shall be 0 */
+    nfa_dm_start_rf_intf_ext(NCI_INTF_EXT_WLCP_NON_AUTO, nullptr, 0);
     // TODO: remove as only for testing, replace by extension activation
-    nfa_dm_cb.flags |= NFA_DM_FLAGS_RF_EXT_ACTIVE;
-    nfa_dm_cb.flags |= NFA_DM_FLAGS_WLCP_ENABLED;
+    // nfa_dm_cb.flags |= NFA_DM_FLAGS_RF_EXT_ACTIVE;
+    // nfa_dm_cb.flags |= NFA_DM_FLAGS_WLCP_ENABLED;
 
-    tNFA_WLC_EVT_DATA wlc_cback_data;
-    wlc_cback_data.status = NFA_STATUS_OK;
-    nfa_wlc_event_notify(NFA_WLC_START_RESULT_EVT, &wlc_cback_data);
+    // tNFA_WLC_EVT_DATA wlc_cback_data;
+    // wlc_cback_data.status = NFA_STATUS_OK;
+    // nfa_wlc_event_notify(NFA_WLC_START_RESULT_EVT, &wlc_cback_data);
 
     return true;
 
