@@ -1956,23 +1956,7 @@ bool nfc_ncif_proc_proprietary_rsp(uint8_t mt, uint8_t gid, uint8_t oid) {
       break;
 
     case NCI_MT_NTF:
-      switch (gid) {
-        case NCI_GID_CORE:
-          /* check for CORE_RESET_NTF or CORE_CONN_CREDITS_NTF */
-          if (oid != 0x00 && oid != 0x06) stat = TRUE;
-          break;
-        case NCI_GID_RF_MANAGE:
-          /* check for CORE_CONN_CREDITS_NTF or NFA_EE_ACTION_NTF or
-           * NFA_EE_DISCOVERY_REQ_NTF */
-          if (oid != 0x06 && oid != 0x09 && oid != 0x0A) stat = TRUE;
-          break;
-        case NCI_GID_EE_MANAGE:
-          if (oid != 0x00) stat = TRUE;
-          break;
-        default:
-          stat = TRUE;
-          break;
-      }
+      stat = FALSE;
       break;
 
     default:
